@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DDT Reporting Ecosystem — Poster</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:     #080C14;
+  --bg1:    #0D1320;
+  --border: rgba(255,255,255,.07);
+  --bord2:  rgba(255,255,255,.12);
+  --txt:    #F0F4FF;
+  --txt2:   #8B97B3;
+  --txt3:   #4B5A73;
+  --blue:   #3B82F6;
+  --cyan:   #06B6D4;
+  --green:  #10B981;
+  --amber:  #F59E0B;
+  --purple: #8B5CF6;
+  --red:    #EF4444;
+}
+
+html, body {
+  height: 100%; overflow: hidden;
+  background: var(--bg); color: var(--txt);
+  font-family: 'DM Sans', sans-serif;
+}
+
+body::before, body::after {
+  content: ''; position: fixed; border-radius: 50%;
+  filter: blur(120px); pointer-events: none; z-index: 0;
+}
+body::before { width: 500px; height: 500px; top: -180px; right: -80px; background: rgba(59,130,246,.13); }
+body::after  { width: 400px; height: 400px; bottom: -120px; left: -80px; background: rgba(6,182,212,.09); }
+
+/* ── Page: strict 4-row 100vh grid ── */
+.page {
+  position: relative; z-index: 1;
+  width: 100%; height: 100vh;
+  max-width: 1280px; margin: 0 auto;
+  padding: 12px clamp(14px, 2vw, 36px) 10px;
+  display: grid;
+  grid-template-rows: 34px auto minmax(0,1fr) minmax(0,1fr);
+  gap: 10px;
+}
+
+/* ── Topbar ── */
+.topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; height: 34px;
+  background: rgba(13,19,32,.9);
+  border: 1px solid var(--bord2); border-radius: 8px;
+  backdrop-filter: blur(12px); overflow: hidden;
+}
+.tb-logo { font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: .08em; white-space: nowrap; }
+.tb-sep  { width: 1px; height: 14px; background: var(--bord2); flex-shrink: 0; }
+.tb-tag  { font-family: 'Space Mono', monospace; font-size: 8.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--txt3); white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tb-dot  { width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-left: auto; flex-shrink: 0; box-shadow: 0 0 7px rgba(16,185,129,.6); }
+
+/* ── Row 2: hero | flow, side by side ── */
+.hero-flow {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  gap: 24px;
+  align-items: center;
+  overflow: hidden;
+}
+
+.hero { overflow: hidden; }
+.eyebrow {
+  font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: .15em;
+  text-transform: uppercase; color: var(--txt3); margin-bottom: 6px;
+}
+.hero h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(18px, 2vw, 30px);
+  font-weight: 400; line-height: 1.1; letter-spacing: -.02em;
+  margin-bottom: 8px;
+}
+.hero h1 em { font-style: italic; color: var(--cyan); }
+.hero .lead {
+  font-size: 11.5px; font-weight: 300; color: var(--txt2); line-height: 1.55;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* Flow */
+.flow-wrap { overflow: hidden; min-width: 0; }
+.section-label {
+  font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--txt3); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.flow { display: flex; align-items: stretch; overflow: hidden; width: 100%; }
+.flow-node {
+  flex: 1; min-width: 0;
+  background: var(--bg1); border: 1px solid var(--bord2);
+  border-radius: 7px; padding: 8px 4px; text-align: center;
+}
+.fn-icon  { font-size: 13px; margin-bottom: 3px; }
+.fn-label { font-size: 9px; font-weight: 600; color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
+.fn-sub   { font-size: 7px; color: var(--txt3); margin-top: 1px; font-family: 'Space Mono', monospace; }
+.flow-arrow {
+  flex-shrink: 0; width: 20px; position: relative; align-self: center;
+}
+.flow-arrow::before {
+  content: ''; position: absolute; top: 50%; left: 2px; right: 2px; height: 1px;
+  background: linear-gradient(90deg, var(--blue), var(--cyan)); transform: translateY(-50%);
+}
+.flow-arrow span { display: block; text-align: center; font-size: 8px; color: var(--txt3); position: relative; }
+
+/* ── Row 3: Core Components ── */
+.card-section {
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+}
+.card-grid {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  grid-template-rows: repeat(2, minmax(0,1fr));
+  gap: 8px;
+}
+.card {
+  background: var(--bg1); border: 1px solid var(--bord2); border-radius: 8px;
+  padding: 9px 11px; position: relative; overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: border-color .15s;
+}
+.card:hover { border-color: rgba(255,255,255,.22); }
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; border-radius: 8px 8px 0 0;
+}
+.card.blue::before   { background: linear-gradient(90deg,var(--blue),var(--cyan)); }
+.card.green::before  { background: linear-gradient(90deg,var(--green),var(--cyan)); }
+.card.purple::before { background: linear-gradient(90deg,var(--purple),var(--blue)); }
+.card.amber::before  { background: linear-gradient(90deg,var(--amber),var(--green)); }
+.card.cyan::before   { background: linear-gradient(90deg,var(--cyan),var(--purple)); }
+.card.red::before    { background: linear-gradient(90deg,var(--red),var(--amber)); }
+
+.card-icon { font-size: 14px; margin-bottom: 4px; flex-shrink: 0; line-height: 1; }
+.card h3   { font-size: 11px; font-weight: 600; color: var(--txt); margin-bottom: 3px; flex-shrink: 0; line-height: 1.2; }
+.card p    {
+  font-size: 10px; color: var(--txt2); line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* ── Row 4: Highlights ── */
+.feat-section {
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+}
+.feat-grid {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  grid-template-rows: repeat(2, minmax(0,1fr));
+  gap: 8px;
+}
+.feat {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: var(--bg1); border: 1px solid var(--border);
+  border-radius: 7px; padding: 8px 10px; overflow: hidden;
+}
+.feat-dot {
+  flex-shrink: 0; width: 5px; height: 5px; border-radius: 50%; margin-top: 3px;
+}
+.feat-dot.blue   { background:var(--blue);   box-shadow:0 0 5px rgba(59,130,246,.5); }
+.feat-dot.cyan   { background:var(--cyan);   box-shadow:0 0 5px rgba(6,182,212,.5); }
+.feat-dot.green  { background:var(--green);  box-shadow:0 0 5px rgba(16,185,129,.5); }
+.feat-dot.amber  { background:var(--amber);  box-shadow:0 0 5px rgba(245,158,11,.5); }
+.feat-dot.purple { background:var(--purple); box-shadow:0 0 5px rgba(139,92,246,.5); }
+.feat-body { min-width: 0; overflow: hidden; }
+.feat-title {
+  font-size: 10.5px; font-weight: 600; color: var(--txt); margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.feat-desc {
+  font-size: 10px; color: var(--txt2); line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-thumb { background: var(--txt3); border-radius: 2px; }
+
+/* ── Component Map ── */
+.cmap { display:flex; align-items:stretch; overflow:hidden; }
+.cmap-inputs {
+  flex:1; min-width:0;
+  display:grid;
+  grid-template-columns: 1fr 18px 1fr 18px 1fr;
+  gap:4px 0;
+}
+.cmap-cn {
+  position:relative;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+}
+.cmap-cn::before {
+  content:''; position:absolute; top:50%; left:1px; right:1px; height:1px;
+  background:linear-gradient(90deg,var(--blue),var(--cyan)); transform:translateY(-50%);
+}
+.cmap-cn span { font-size:5.5px; color:var(--txt3); font-family:'Space Mono',monospace; position:relative; }
+.cmap-bracket {
+  flex-shrink:0; width:14px; margin:5px 0; position:relative;
+  border-right:1px solid rgba(59,130,246,.4);
+}
+.cmap-bracket::after {
+  content:''; position:absolute;
+  left:100%; top:50%; width:8px; height:1px;
+  background:linear-gradient(90deg,var(--blue),var(--cyan));
+  transform:translateY(-50%);
+}
+.cmap-right { flex:1; min-width:0; display:flex; align-items:center; padding-left:8px; }
+
+/* ── Responsive ── */
+@media (max-width: 800px) {
+  .hero-flow { grid-template-columns: 1fr; }
+  .flow-wrap { display: none; }
+}
+@media (max-width: 660px) {
+  .card-grid { grid-template-columns: repeat(2, minmax(0,1fr)); grid-template-rows: repeat(3, minmax(0,1fr)); }
+  .feat-grid { grid-template-columns: repeat(2, minmax(0,1fr)); grid-template-rows: repeat(3, minmax(0,1fr)); }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Row 1: Topbar -->
+  <div class="topbar">
+    <span class="tb-logo">DDT Reporting Ecosystem</span>
+    <div class="tb-sep"></div>
+    <span class="tb-tag">Test Automation &middot; API Testing &middot; Reporting</span>
+    <div class="tb-dot"></div>
+  </div>
+
+  <!-- Row 2: Hero + Data Flow -->
+  <div class="hero-flow">
+    <div class="hero">
+      <div class="eyebrow">Data-Driven Testing Framework</div>
+      <h1>From raw test run<br>to <em>publishable report</em><br>in seconds.</h1>
+      <p class="lead">A full reporting toolkit for Postman DDT workflows: intercept API calls through a MITM proxy, build structured test cases in the browser, generate DDT datasets, export HTML reports and sync to GitHub via Cloudflare Worker OAuth proxy.</p>
+    </div>
+    <div class="flow-wrap">
+      <div class="section-label">Component Map</div>
+      <div class="cmap">
+        <!-- Left: 3 input paths converging -->
+        <div class="cmap-inputs">
+          <!-- Row 1: Postman capture pipeline -->
+          <div class="flow-node" style="grid-row:1;grid-column:1;border-color:rgba(245,158,11,.4)">
+            <div class="fn-icon">&#9881;</div>
+            <div class="fn-label">Postman</div>
+            <div class="fn-sub">ddt runner</div>
+          </div>
+          <div class="cmap-cn" style="grid-row:1;grid-column:2"><span>proxy</span></div>
+          <div class="flow-node" style="grid-row:1;grid-column:3;border-color:rgba(59,130,246,.4)">
+            <div class="fn-icon">&#128274;</div>
+            <div class="fn-label">Companion</div>
+            <div class="fn-sub">MITM :8888/89</div>
+          </div>
+          <div class="cmap-cn" style="grid-row:1;grid-column:4"><span>SSE</span></div>
+          <div class="flow-node" style="grid-row:1;grid-column:5;border-color:rgba(6,182,212,.4)">
+            <div class="fn-icon">&#128247;</div>
+            <div class="fn-label">Builder SPA</div>
+            <div class="fn-sub">single-file</div>
+          </div>
+          <!-- Row 2: Report Viewer (aligns to col 5) -->
+          <div class="flow-node" style="grid-row:2;grid-column:5;border-color:rgba(139,92,246,.4)">
+            <div class="fn-icon">&#128202;</div>
+            <div class="fn-label">Rpt Viewer</div>
+            <div class="fn-sub">filter+browse</div>
+          </div>
+          <!-- Row 3: Git Viewer (aligns to col 5) -->
+          <div class="flow-node" style="grid-row:3;grid-column:5;border-color:rgba(16,185,129,.4)">
+            <div class="fn-icon">&#128065;</div>
+            <div class="fn-label">Git Viewer</div>
+            <div class="fn-sub">render link</div>
+          </div>
+        </div>
+        <!-- Bracket merge connector -->
+        <div class="cmap-bracket"></div>
+        <!-- Right: shared path CF Worker → GitHub → HTML Report -->
+        <div class="cmap-right">
+          <div class="flow-node" style="border-color:rgba(139,92,246,.5)">
+            <div class="fn-icon">&#9729;</div>
+            <div class="fn-label">CF Worker</div>
+            <div class="fn-sub">proxy &middot; D1 DB</div>
+          </div>
+          <div class="cmap-cn"><span>api</span></div>
+          <div class="flow-node" style="border-color:rgba(100,120,200,.4)">
+            <div class="fn-icon">&#128279;</div>
+            <div class="fn-label">GitHub</div>
+            <div class="fn-sub">report store</div>
+          </div>
+          <div class="cmap-cn"><span>open</span></div>
+          <div class="flow-node" style="border-color:rgba(16,185,129,.4)">
+            <div class="fn-icon">&#128196;</div>
+            <div class="fn-label">HTML Report</div>
+            <div class="fn-sub">standalone</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3: Core Components -->
+  <div class="card-section">
+    <div class="section-label">Core Components</div>
+    <div class="card-grid">
+      <div class="card cyan">
+        <div class="card-icon">&#128247;</div>
+        <h3>Test Report Builder</h3>
+        <p>Single-file browser SPA. Ingests live captures, lets you edit payloads, validate JSON/XML, attach screenshots, and export dataset or report.</p>
+      </div>
+      <div class="card purple">
+        <div class="card-icon">&#128279;</div>
+        <h3>Report Viewer</h3>
+        <p>GitHub-backed report browser. Sidebar tree with tag filtering by app/API/date/executor. Background sync every 5&nbsp;min, manual force-refresh.</p>
+      </div>
+      <div class="card blue">
+        <div class="card-icon">&#128274;</div>
+        <h3>companion.js</h3>
+        <p>Node.js MITM proxy. Intercepts Postman traffic, auto-generates a CA certificate, streams captured test cases via SSE to the builder in real time.</p>
+      </div>
+      <div class="card green">
+        <div class="card-icon">&#128065;</div>
+        <h3>Git HTML Viewer</h3>
+        <p>Lightweight standalone viewer for any HTML file stored in a GitHub repo. No server required &mdash; renders reports directly from raw GitHub content. Share reports via link, no need to download files.</p>
+      </div>
+      <div class="card amber">
+        <div class="card-icon">&#128230;</div>
+        <h3>Artifacts</h3>
+        <p><strong style="color:var(--txt)">dataset.json</strong> &mdash; DDT data for Postman re-runs. <strong style="color:var(--txt)">Execution bundle</strong> &mdash; comments &amp; screenshots. <strong style="color:var(--txt)">HTML report</strong> &mdash; self-contained with <code>trb-*</code> meta tags.</p>
+      </div>
+      <div class="card red">
+        <div class="card-icon">&#128296;</div>
+        <h3>Postman DDT + Custom Newman Allure Reporter</h3>
+        <p>Data-driven Postman collection powered by <code>dataset.json</code>. Custom Newman Allure reporter generates Allure HTML reports from collection runs &mdash; per-request payloads, responses, and test results.</p>
+      </div>
+      <div class="card purple" style="grid-column:span 2">
+        <div class="card-icon">&#9729;</div>
+        <h3>CF Worker + D1 Auth Proxy</h3>
+        <p>Cloudflare Worker OAuth proxy for GitHub API. Handles auth flow server-side, stores access tokens in D1 database. No client secrets exposed in browser.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 4: Highlights -->
+  <div class="feat-section">
+    <div class="section-label">Highlights</div>
+    <div class="feat-grid">
+      <div class="feat">
+        <div class="feat-dot blue"></div>
+        <div class="feat-body">
+          <div class="feat-title">Real-Time Test Capture</div>
+          <div class="feat-desc">Postman traffic intercepted by MITM proxy, streamed via SSE <code>/events</code> to builder &mdash; test cases appear instantly as collection runs.</div>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="feat-dot cyan"></div>
+        <div class="feat-body">
+          <div class="feat-title">Git &amp; GitHub Auth Integration</div>
+          <div class="feat-desc">Push reports to GitHub via Cloudflare Worker OAuth proxy (D1 token store, no client secrets). Configurable repo/branch/folder &mdash; conflict-safe SHA writes.</div>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="feat-dot green"></div>
+        <div class="feat-body">
+          <div class="feat-title">Single-File SPA</div>
+          <div class="feat-desc">Entire builder ships as one HTML file &mdash; zero build step, zero runtime dependencies. Open locally or serve statically.</div>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="feat-dot amber"></div>
+        <div class="feat-body">
+          <div class="feat-title">Execution Comments &amp; Images</div>
+          <div class="feat-desc">Attach notes and base64 screenshots per test case. Stored in a separate execution bundle, excluded from dataset export.</div>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="feat-dot purple"></div>
+        <div class="feat-body">
+          <div class="feat-title">Shareable Report Links</div>
+          <div class="feat-desc">Share any HTML report via direct link &mdash; rendered from raw GitHub content, no download needed. Git HTML Viewer serves reports instantly in browser.</div>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="feat-dot blue"></div>
+        <div class="feat-body">
+          <div class="feat-title">Jira Linkage</div>
+          <div class="feat-desc">Attach Jira ticket URLs to test cases. Rendered as clickable badges in the report and surfaced as filter tags in the viewer.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

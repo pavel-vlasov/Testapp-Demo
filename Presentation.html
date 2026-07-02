@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DDT Reporting Ecosystem — Presentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════
+   RESET & TOKENS
+══════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #080C14;
+  --bg1:     #0D1320;
+  --bg2:     #111827;
+  --border:  rgba(255,255,255,.07);
+  --bord2:   rgba(255,255,255,.12);
+  --txt:     #F0F4FF;
+  --txt2:    #8B97B3;
+  --txt3:    #4B5A73;
+  --blue:    #3B82F6;
+  --cyan:    #06B6D4;
+  --green:   #10B981;
+  --amber:   #F59E0B;
+  --purple:  #8B5CF6;
+  --red:     #EF4444;
+  --glow-b:  rgba(59,130,246,.22);
+  --glow-c:  rgba(6,182,212,.18);
+  --sw: 900px;
+  --sh: 540px;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--txt); font-family: 'DM Sans', sans-serif; overflow: hidden; }
+
+/* ══════════════════════════════════════════════════
+   SHELL
+══════════════════════════════════════════════════ */
+#app { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; }
+
+#topbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 24px; height: 48px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(8,12,20,.92);
+  backdrop-filter: blur(12px);
+  position: relative; z-index: 100; flex-shrink: 0;
+}
+.tb-logo { font-family:'Space Mono',monospace; font-size:11px; color:var(--txt); letter-spacing:.06em; white-space:nowrap; font-weight: 600; }
+.tb-sep  { width:1px; height:18px; background:var(--bord2); flex-shrink:0; }
+.tb-title {
+  font-size: 12px; font-weight: 500; color: var(--txt);
+  flex-shrink: 0; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; letter-spacing: .02em;
+}
+.tb-title em { font-style: normal; color: var(--blue); font-weight: 600; }
+.tb-counter { font-family:'Space Mono',monospace; font-size:11px; color:var(--txt3); white-space:nowrap; }
+.tb-bar {
+  position:absolute; bottom:0; left:0; height:2px;
+  background:linear-gradient(90deg,var(--blue),var(--cyan));
+  transition:width .4s cubic-bezier(.4,0,.2,1);
+}
+
+#stage {
+  position:relative; display:flex;
+  align-items:center; justify-content:center; overflow:hidden;
+}
+#stage::before, #stage::after {
+  content:''; position:absolute; border-radius:50%; filter:blur(100px); pointer-events:none;
+}
+#stage::before { width:500px; height:500px; top:-160px; right:-80px;  background:var(--glow-b); }
+#stage::after  { width:360px; height:360px; bottom:-120px; left:-80px; background:var(--glow-c); }
+
+#slide-wrap { width:var(--sw); height:var(--sh); position:relative; }
+
+.slide {
+  position:absolute; inset:0;
+  background:var(--bg1); border:1px solid var(--bord2); border-radius:12px;
+  overflow:hidden; display:flex; flex-direction:column;
+  opacity:0; pointer-events:none;
+  box-shadow:0 24px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.035);
+}
+.slide.active { opacity:1; pointer-events:all; }
+
+.slide.slide-enter      { animation: sIn   .42s cubic-bezier(.32,.72,0,1) forwards; }
+.slide.slide-exit       { animation: sOut  .32s cubic-bezier(.32,.72,0,1) forwards; }
+.slide.slide-enter-back { animation: sInB  .42s cubic-bezier(.32,.72,0,1) forwards; }
+.slide.slide-exit-back  { animation: sOutB .32s cubic-bezier(.32,.72,0,1) forwards; }
+
+@keyframes sIn   { from{opacity:0;transform:translateX( 56px) scale(.97)} to{opacity:1;transform:none} }
+@keyframes sOut  { from{opacity:1;transform:none} to{opacity:0;transform:translateX(-56px) scale(.97)} }
+@keyframes sInB  { from{opacity:0;transform:translateX(-56px) scale(.97)} to{opacity:1;transform:none} }
+@keyframes sOutB { from{opacity:1;transform:none} to{opacity:0;transform:translateX( 56px) scale(.97)} }
+
+@keyframes fadeUp { to { opacity:1; transform:translateY(0); } }
+.slide.active .stagger > * { opacity:0; transform:translateY(10px); animation:fadeUp .38s ease forwards; }
+.slide.active .stagger > *:nth-child(1){animation-delay:.07s}
+.slide.active .stagger > *:nth-child(2){animation-delay:.14s}
+.slide.active .stagger > *:nth-child(3){animation-delay:.21s}
+.slide.active .stagger > *:nth-child(4){animation-delay:.28s}
+.slide.active .stagger > *:nth-child(5){animation-delay:.35s}
+.slide.active .stagger > *:nth-child(6){animation-delay:.42s}
+.slide.active .stagger > *:nth-child(7){animation-delay:.49s}
+.slide.active .stagger > *:nth-child(8){animation-delay:.56s}
+
+#bottombar {
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  padding:12px 24px;
+  border-top:1px solid var(--border);
+  background:rgba(8,12,20,.92); backdrop-filter:blur(12px);
+  flex-shrink:0;
+}
+.nav-btn {
+  width:34px; height:34px; border-radius:7px;
+  border:1px solid var(--bord2); background:var(--bg2); color:var(--txt2);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all .14s; font-size:13px; flex-shrink:0;
+}
+.nav-btn:hover  { border-color:var(--blue); color:var(--txt); background:rgba(59,130,246,.12); }
+.nav-btn:disabled { opacity:.28; cursor:not-allowed; }
+
+.dot-nav { display:flex; gap:7px; flex-shrink:0; }
+.dot {
+  width:7px; height:7px; border-radius:50%;
+  background:var(--txt3); cursor:pointer;
+  transition:all .2s; border:1px solid var(--bord2);
+}
+.dot.active { width:22px; border-radius:4px; background:var(--blue); border-color:var(--blue); }
+.dot:hover  { background:var(--blue); border-color:var(--blue); }
+
+.kb-hint {
+  display:flex; gap:5px; align-items:center;
+  margin-left:6px; padding-left:6px;
+  border-left:1px solid var(--border);
+  font-size:10px; color:var(--txt3);
+}
+.key {
+  font-family:'Space Mono',monospace; border:1px solid var(--bord2);
+  border-radius:3px; padding:1px 4px;
+  background:rgba(255,255,255,.04); font-size:9px;
+}
+
+/* ══════════════════════════════════════════════════
+   COMMON ATOMS
+══════════════════════════════════════════════════ */
+.inner {
+  padding: 36px 52px; height: 100%;
+  display: flex; flex-direction: column; justify-content: center; overflow: hidden;
+}
+h1 {
+  font-family:'DM Serif Display',serif;
+  font-size:58px; font-weight:400; line-height:1.08; margin-bottom:16px; letter-spacing:-.02em;
+}
+h1 em { font-style:italic; color:var(--cyan); }
+h2 {
+  font-family:'DM Serif Display',serif;
+  font-size:32px; font-weight:400; line-height:1.15; margin-bottom:18px; letter-spacing:-.02em;
+}
+h2 em { font-style:italic; color:var(--cyan); }
+.eyebrow {
+  font-family:'Space Mono',monospace;
+  font-size:9px; letter-spacing:.13em; text-transform:uppercase; color:var(--txt3); margin-bottom:8px;
+}
+.tag {
+  display:inline-block; padding:2px 9px; border-radius:5px;
+  font-size:10px; font-weight:500; white-space:nowrap;
+  background:rgba(59,130,246,.14); border:1px solid rgba(59,130,246,.38); color:var(--blue);
+}
+.tag.cyan   { background:rgba(6,182,212,.14);  border-color:rgba(6,182,212,.38);  color:var(--cyan); }
+.tag.green  { background:rgba(16,185,129,.14); border-color:rgba(16,185,129,.38); color:var(--green); }
+.tag.amber  { background:rgba(245,158,11,.14); border-color:rgba(245,158,11,.38); color:var(--amber); }
+.tag.purple { background:rgba(139,92,246,.14); border-color:rgba(139,92,246,.38); color:var(--purple); }
+.tag.red    { background:rgba(239,68,68,.14);  border-color:rgba(239,68,68,.38);  color:var(--red); }
+.tag.future { background:rgba(75,90,115,.18);  border-color:rgba(139,160,190,.3); color:var(--txt3); font-style:italic; }
+
+/* ══════════════════════════════════════════════════
+   S1 — TITLE
+══════════════════════════════════════════════════ */
+#s1 .inner { justify-content:center; text-align:center; }
+#s1 h1    { font-size:58px; margin-bottom:8px; }
+#s1 .sub  { font-size:14px; color:var(--txt2); margin-bottom:10px; line-height:1.6; }
+#s1 .tags { display:flex; gap:7px; justify-content:center; flex-wrap:wrap; margin-bottom:18px; }
+#s1 .ecosystem-chips {
+  display:flex; gap:11px; justify-content:center; margin-top:6px;
+}
+#s1 .ec-chip {
+  padding:8px 16px; border-radius:8px; text-align:center;
+  font-size:11px; font-weight:600;
+}
+
+/* ══════════════════════════════════════════════════
+   S2 — PROBLEMS
+══════════════════════════════════════════════════ */
+#s2 .layout {
+  display:grid; grid-template-columns:180px 1fr;
+  gap:32px; align-items:start;
+}
+#s2 h2 { font-size:28px; margin-bottom:6px; }
+#s2 .col-label p { font-size:11px; color:var(--txt3); line-height:1.5; }
+.prob-card {
+  padding:12px 16px; margin-bottom:9px;
+  background:rgba(239,68,68,.06);
+  border:1px solid rgba(239,68,68,.18); border-left:3px solid var(--red); border-radius:8px;
+}
+.prob-card:last-child { margin-bottom:0; }
+.prob-card strong { display:block; color:var(--red); font-size:11px; margin-bottom:3px; }
+.prob-card p { font-size:11px; color:var(--txt2); margin:0; line-height:1.5; }
+
+/* ══════════════════════════════════════════════════
+   S3 — ECOSYSTEM
+══════════════════════════════════════════════════ */
+#s3 .eco-grid {
+  display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:6px;
+}
+.eco-card {
+  border-radius:10px; padding:16px 14px; position:relative;
+}
+.eco-card .ec-num {
+  font-family:'Space Mono',monospace; font-size:9px; letter-spacing:.1em;
+  margin-bottom:6px; display:block;
+}
+.eco-card .ec-title { font-size:14px; font-weight:700; margin-bottom:6px; display:block; }
+.eco-card .ec-file {
+  font-family:'Space Mono',monospace; font-size:9px; padding:2px 7px;
+  border-radius:4px; display:inline-block; margin-bottom:8px;
+}
+.eco-card .ec-desc { font-size:11px; color:var(--txt2); line-height:1.55; }
+.eco-card .ec-tags { margin-top:8px; display:flex; flex-wrap:wrap; gap:5px; }
+.eco-card--blue  { background:rgba(59,130,246,.07);  border:1px solid rgba(59,130,246,.22); }
+.eco-card--green { background:rgba(16,185,129,.07);  border:1px solid rgba(16,185,129,.22); }
+.eco-card--purple{ background:rgba(139,92,246,.07);  border:1px solid rgba(139,92,246,.22); }
+.eco-connector {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font-size:11px; color:var(--txt3); gap:2px;
+}
+.eco-connector .ec-arrow { font-size:18px; line-height:1; }
+.eco-connector .ec-label { font-family:'Space Mono',monospace; font-size:8px; letter-spacing:.05em; }
+.eco-bottom-note {
+  margin-top:12px; padding:9px 14px;
+  background:rgba(6,182,212,.06); border:1px solid rgba(6,182,212,.18); border-radius:8px;
+  font-size:11px; color:var(--txt2); display:flex; gap:9px; align-items:center;
+}
+.eco-bottom-note span { color:var(--cyan); font-size:13px; flex-shrink:0; }
+
+/* ══════════════════════════════════════════════════
+   S4 — WHAT IS BUILDER
+══════════════════════════════════════════════════ */
+#s4 .layout {
+  display:grid; grid-template-columns:1fr 1fr; gap:36px; align-items:center; height:100%;
+}
+#s4 h2 { font-size:28px; margin-bottom:10px; }
+#s4 .desc { font-size:11px; color:var(--txt2); line-height:1.65; margin-bottom:16px; }
+.what-point { display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; }
+.what-point .wp-icon { color:var(--cyan); font-size:14px; flex-shrink:0; margin-top:2px; }
+.what-point .wp-body { font-size:12px; color:var(--txt2); line-height:1.5; }
+.what-point .wp-body strong { color:var(--txt); display:block; font-size:12px; margin-bottom:1px; }
+.flow-diagram { display:flex; flex-direction:column; gap:0; }
+.flow-block { border-radius:8px; padding:10px 14px; text-align:center; }
+.flow-block .fb-title { font-family:'Space Mono',monospace; font-size:9px; letter-spacing:.08em; margin-bottom:4px; }
+.flow-block .fb-sub { font-size:11px; color:var(--txt2); line-height:1.4; }
+.flow-arrow { text-align:center; color:var(--txt3); font-size:16px; padding:2px 0; line-height:1; }
+.flow-arrow span { font-family:'Space Mono',monospace; font-size:8px; color:var(--txt3); letter-spacing:.06em; display:block; margin-top:1px; }
+
+/* ══════════════════════════════════════════════════
+   S5 — BUILDER CORE FEATURES
+══════════════════════════════════════════════════ */
+#s5 .feat-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 4px;
+}
+#s5 .feat-card { padding: 10px 10px; }
+#s5 .feat-card strong { font-size: 10px; }
+#s5 .feat-card p { font-size: 10px; }
+.feat-card {
+  padding:12px 12px; background:rgba(59,130,246,.05);
+  border:1px solid var(--bord2); border-radius:8px; transition:border-color .2s, transform .2s;
+}
+.feat-card:hover { border-color:rgba(59,130,246,.4); transform:translateY(-2px); }
+.feat-card strong { display:block; color:var(--blue); font-size:11px; margin-bottom:4px; }
+.feat-card p { font-size:11px; color:var(--txt2); margin:0; line-height:1.5; }
+.feat-card--cyan   { border-color:rgba(6,182,212,.22) !important; background:rgba(6,182,212,.05) !important; }
+.feat-card--cyan strong { color:var(--cyan) !important; }
+.feat-card--green  { border-color:rgba(16,185,129,.22) !important; background:rgba(16,185,129,.05) !important; }
+.feat-card--green strong { color:var(--green) !important; }
+.feat-card--amber  { border-color:rgba(245,158,11,.22) !important; background:rgba(245,158,11,.05) !important; }
+.feat-card--amber strong { color:var(--amber) !important; }
+.feat-card--purple { border-color:rgba(139,92,246,.22) !important; background:rgba(139,92,246,.05) !important; }
+.feat-card--purple strong { color:var(--purple) !important; }
+
+/* ══════════════════════════════════════════════════
+   S6 — GIT INTEGRATION
+══════════════════════════════════════════════════ */
+#s6 .git-layout { display:grid; grid-template-columns:1fr; gap:22px; margin-top:6px; }
+.git-phase-list { display:flex; flex-direction:column; gap:6px; }
+.git-phase {
+  display:flex; gap:10px; align-items:flex-start; padding:9px 12px;
+  background:rgba(16,185,129,.05); border:1px solid rgba(16,185,129,.15);
+  border-left:3px solid var(--green); border-radius:7px;
+}
+.git-phase .gp-num { font-family:'Space Mono',monospace; font-size:10px; color:var(--green); min-width:18px; padding-top:1px; }
+.git-phase .gp-text { font-size:11px; color:var(--txt2); line-height:1.5; }
+.git-phase .gp-text strong { color:var(--txt); display:block; font-size:11px; margin-bottom:1px; }
+.git-right { display:flex; flex-direction:column; gap:10px; }
+.git-meta-box {
+  background:rgba(59,130,246,.06); border:1px solid rgba(59,130,246,.2); border-radius:8px; padding:12px 14px;
+}
+.git-meta-title { font-family:'Space Mono',monospace; font-size:9px; color:var(--blue); letter-spacing:.08em; margin-bottom:8px; }
+.git-meta-tag { font-family:'Space Mono',monospace; font-size:9px; color:var(--txt2); padding:2px 0; border-top:1px solid var(--border); line-height:1.5; }
+.git-meta-tag:first-of-type { border-top:none; }
+.git-meta-tag em { color:var(--cyan); font-style:normal; }
+.git-flow-box {
+  background:rgba(245,158,11,.05); border:1px solid rgba(245,158,11,.18); border-radius:8px; padding:10px 14px;
+}
+.git-flow-title { font-family:'Space Mono',monospace; font-size:9px; color:var(--amber); letter-spacing:.08em; margin-bottom:7px; }
+.git-flow-steps { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.git-flow-step {
+  font-size:9px; padding:4px 8px; border-radius:5px; text-align:center; line-height:1.4;
+  font-family:'Space Mono',monospace;
+}
+.git-flow-arr { color:var(--txt3); font-size:12px; }
+
+/* ══════════════════════════════════════════════════
+   S7 — EXTRAS (comments, xml, themes, perf)
+══════════════════════════════════════════════════ */
+#s7 .extras-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:6px;
+}
+.extra-card {
+  padding:13px 14px; border-radius:8px;
+  border:1px solid var(--bord2);
+}
+.extra-card .ex-header {
+  display:flex; align-items:center; gap:8px; margin-bottom:8px;
+}
+.extra-card .ex-icon { font-size:16px; }
+.extra-card .ex-title { font-size:12px; font-weight:700; }
+.extra-card .ex-body { font-size:11px; color:var(--txt2); line-height:1.55; }
+.extra-card .ex-tags { margin-top:7px; display:flex; flex-wrap:wrap; gap:5px; }
+.extra-card--blue   { background:rgba(59,130,246,.05); }
+.extra-card--cyan   { background:rgba(6,182,212,.05); }
+.extra-card--purple { background:rgba(139,92,246,.05); }
+.extra-card--green  { background:rgba(16,185,129,.05); }
+
+/* ══════════════════════════════════════════════════
+   S8 — ARCHITECTURE
+══════════════════════════════════════════════════ */
+#s8 .arch-full {
+  display:grid; grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;
+  align-items:center; margin-top:10px; gap:0;
+}
+.arch-block {
+  background:rgba(6,182,212,.06); border:1px solid rgba(6,182,212,.22);
+  border-radius:10px; padding:12px 10px; text-align:center;
+}
+.arch-block .ab-title {
+  font-family:'Space Mono',monospace; font-size:9px;
+  color:var(--cyan); margin-bottom:6px; letter-spacing:.04em;
+}
+.arch-block .ab-item {
+  font-size:9px; color:var(--txt2);
+  padding:2px 0; border-top:1px solid var(--border); line-height:1.4;
+}
+.arch-block .ab-item:first-of-type { border-top:none; padding-top:0; }
+.arch-block--green { background:rgba(16,185,129,.06); border-color:rgba(16,185,129,.22); }
+.arch-block--green .ab-title { color:var(--green); }
+.arch-block--blue  { background:rgba(59,130,246,.06); border-color:rgba(59,130,246,.22); }
+.arch-block--blue  .ab-title { color:var(--blue); }
+.arch-block--purple{ background:rgba(139,92,246,.06); border-color:rgba(139,92,246,.22); }
+.arch-block--purple .ab-title { color:var(--purple); }
+.arch-arrow {
+  display:flex; flex-direction:column; align-items:center;
+  gap:3px; padding:0 7px; color:var(--txt3); font-size:14px;
+}
+.arch-arrow .al {
+  font-family:'Space Mono',monospace; font-size:7px;
+  color:var(--txt3); letter-spacing:.05em; white-space:nowrap;
+}
+.arch-note {
+  margin-top:12px; padding:8px 12px;
+  background:rgba(245,158,11,.06); border:1px solid rgba(245,158,11,.18);
+  border-radius:8px; font-size:11px; color:var(--txt2);
+  display:flex; gap:9px; align-items:center;
+}
+.arch-note span { color:var(--amber); font-size:13px; flex-shrink:0; }
+
+/* ══════════════════════════════════════════════════
+   S9 — REPORT VIEWER
+══════════════════════════════════════════════════ */
+#s9 .viewer-layout {
+  display:grid; grid-template-columns:220px 1fr; gap:22px; margin-top:4px;
+}
+.viewer-mock {
+  background:rgba(255,255,255,.03); border:1px solid var(--bord2); border-radius:10px;
+  overflow:hidden; font-size:10px;
+}
+.vm-topbar {
+  background:rgba(59,130,246,.08); border-bottom:1px solid var(--bord2);
+  padding:6px 10px; display:flex; align-items:center; gap:6px;
+}
+.vm-logo { font-size:10px; font-weight:700; color:var(--blue); }
+.vm-pill { font-family:'Space Mono',monospace; font-size:8px; color:var(--txt3); padding:1px 6px; background:var(--bg2); border-radius:3px; border:1px solid var(--bord2); }
+.vm-body { display:grid; grid-template-columns:90px 1fr; height:140px; }
+.vm-sidebar { background:rgba(255,255,255,.02); border-right:1px solid var(--bord2); padding:6px 0; }
+.vm-dir { padding:4px 8px; font-size:9px; color:var(--txt3); font-family:'Space Mono',monospace; }
+.vm-file {
+  padding:3px 8px 3px 16px; font-size:9px; color:var(--txt2); cursor:pointer;
+  display:flex; align-items:center; gap:4px;
+}
+.vm-file.active { background:rgba(59,130,246,.1); color:var(--blue); }
+.vm-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.vm-dot--green { background:var(--green); }
+.vm-dot--red   { background:var(--red); }
+.vm-dot--gray  { background:var(--txt3); }
+.vm-content { padding:8px 10px; }
+.vm-filter-row { display:flex; gap:4px; margin-bottom:6px; flex-wrap:wrap; }
+.vm-chip { font-size:8px; padding:1px 6px; border-radius:3px; border:1px solid var(--bord2); color:var(--txt3); }
+.vm-chip.active { background:rgba(59,130,246,.12); border-color:rgba(59,130,246,.3); color:var(--blue); }
+.vm-report-preview { background:rgba(16,185,129,.05); border:1px solid rgba(16,185,129,.2); border-radius:5px; padding:6px 8px; font-size:9px; color:var(--txt2); }
+.vm-report-title { color:var(--green); font-size:10px; font-weight:600; margin-bottom:3px; }
+.viewer-features { display:flex; flex-direction:column; gap:7px; }
+.vf-item {
+  display:flex; gap:10px; padding:9px 11px;
+  background:rgba(16,185,129,.05); border:1px solid rgba(16,185,129,.15);
+  border-left:2px solid var(--green); border-radius:7px; align-items:flex-start;
+}
+.vf-item .vi-icon { font-size:13px; flex-shrink:0; }
+.vf-item .vi-text { font-size:11px; color:var(--txt2); line-height:1.5; }
+.vf-item .vi-text strong { color:var(--txt); display:block; margin-bottom:1px; font-size:11px; }
+
+/* ══════════════════════════════════════════════════
+   S10 — GIT HTML VIEWER
+══════════════════════════════════════════════════ */
+#s10 .htmlv-layout {
+  display:grid; grid-template-columns:1fr 220px; gap:22px; margin-top:4px;
+}
+.htmlv-features { display:flex; flex-direction:column; gap:7px; }
+.hf-item {
+  display:flex; gap:10px; padding:9px 11px;
+  background:rgba(139,92,246,.05); border:1px solid rgba(139,92,246,.15);
+  border-left:2px solid var(--purple); border-radius:7px; align-items:flex-start;
+}
+.hf-item .hi-icon { font-size:13px; flex-shrink:0; }
+.hf-item .hi-text { font-size:11px; color:var(--txt2); line-height:1.5; }
+.hf-item .hi-text strong { color:var(--txt); display:block; margin-bottom:1px; font-size:11px; }
+.htmlv-mock {
+  background:rgba(255,255,255,.02); border:1px solid var(--bord2); border-radius:10px;
+  overflow:hidden; font-size:10px;
+}
+.hm-landing {
+  background:#080c10; padding:14px 12px; text-align:center;
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+}
+.hm-wordmark { font-size:9px; letter-spacing:.1em; color:rgba(255,255,255,.25); text-transform:uppercase; }
+.hm-headline { font-size:13px; font-weight:600; color:#fff; }
+.hm-headline span { background:linear-gradient(90deg,#00d296,#00a8e8); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+.hm-input-row {
+  display:flex; gap:5px; width:100%;
+}
+.hm-input {
+  flex:1; height:26px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+  border-radius:5px; padding:0 8px; font-size:9px; color:rgba(255,255,255,.6);
+  font-family:'Space Mono',monospace;
+}
+.hm-btn {
+  height:26px; padding:0 10px; font-size:9px; font-weight:600;
+  background:linear-gradient(135deg,#00d296,#00a8e8); border:none; border-radius:5px;
+  color:#000; cursor:pointer;
+}
+.hm-preview {
+  background:rgba(255,255,255,.03); border-top:1px solid rgba(255,255,255,.06); padding:8px 10px;
+  font-size:9px; color:rgba(255,255,255,.3); text-align:center;
+}
+.hm-topbar {
+  background:var(--bg1); border-bottom:1px solid var(--bord2);
+  padding:5px 10px; display:flex; gap:6px; align-items:center;
+}
+.hm-mark { font-size:9px; font-weight:600; color:var(--txt2); }
+.hm-url  { font-family:'Space Mono',monospace; font-size:8px; color:var(--txt3); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hm-iframe { background:rgba(255,255,255,.02); height:80px; display:flex; align-items:center; justify-content:center; color:var(--txt3); font-size:9px; }
+
+/* ══════════════════════════════════════════════════
+   S11 — USAGE SCENARIOS
+══════════════════════════════════════════════════ */
+.sc-card {
+  padding:10px 14px; margin-bottom:7px;
+  background:rgba(245,158,11,.05);
+  border:1px solid rgba(245,158,11,.18); border-left:3px solid var(--amber);
+  border-radius:8px; display:grid;
+  grid-template-columns:130px 1fr; gap:12px; align-items:center;
+}
+.sc-card:last-child { margin-bottom:0; }
+.sc-card .sc-label { font-size:10px; font-weight:600; color:var(--amber); line-height:1.4; }
+.sc-card .sc-flow  { font-family:'Space Mono',monospace; font-size:9px; color:var(--txt); line-height:1.7; }
+.sc-card .sc-flow .arr { color:var(--txt3); }
+.sc-card.sc-viewer { border-left-color:var(--green); border-color:rgba(16,185,129,.18); background:rgba(16,185,129,.05); }
+.sc-card.sc-viewer .sc-label { color:var(--green); }
+.sc-card.sc-htmlv  { border-left-color:var(--purple); border-color:rgba(139,92,246,.18); background:rgba(139,92,246,.05); }
+.sc-card.sc-htmlv .sc-label  { color:var(--purple); }
+.sc-card.future { border-left-color:var(--txt3); border-color:var(--border); background:rgba(255,255,255,.015); opacity:.7; }
+.sc-card.future .sc-label { color:var(--txt3); }
+.sc-card.future .sc-flow  { color:var(--txt3); }
+
+/* ══════════════════════════════════════════════════
+   S12 — DDT INTEGRATION
+══════════════════════════════════════════════════ */
+#s12 .ddt-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:4px; align-items:start;
+}
+.ddt-col-title {
+  font-family:'Space Mono',monospace; font-size:9px;
+  letter-spacing:.1em; text-transform:uppercase; margin-bottom:10px;
+}
+.ddt-step {
+  display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); align-items:flex-start;
+}
+.ddt-step:last-child { border-bottom:none; padding-bottom:0; }
+.ddt-step .ds-num { font-family:'Space Mono',monospace; font-size:10px; color:var(--cyan); min-width:18px; padding-top:1px; }
+.ddt-step .ds-text { font-size:11px; color:var(--txt2); line-height:1.5; }
+.ddt-step .ds-text strong { color:var(--txt); font-size:11px; display:block; margin-bottom:2px; }
+.skill-box {
+  background:rgba(139,92,246,.07); border:1px solid rgba(139,92,246,.25); border-radius:10px; padding:14px;
+}
+.sb-header { display:flex; align-items:center; gap:7px; margin-bottom:10px; flex-wrap:wrap; }
+.sb-title  { font-family:'Space Mono',monospace; font-size:10px; color:var(--purple); letter-spacing:.04em; }
+.sb-badge  { font-size:9px; padding:2px 7px; border-radius:4px; background:rgba(139,92,246,.18); border:1px solid rgba(139,92,246,.35); color:var(--purple); }
+.skill-step { display:flex; gap:9px; padding:8px 0; border-bottom:1px solid var(--border); align-items:flex-start; }
+.skill-step:last-of-type { border-bottom:none; }
+.skill-step .ss-icon { font-size:13px; min-width:18px; }
+.skill-step .ss-text { font-size:11px; color:var(--txt2); line-height:1.5; }
+.skill-step .ss-text strong { color:var(--txt); display:block; font-size:10px; margin-bottom:1px; }
+.sb-note { margin-top:9px; padding-top:9px; border-top:1px solid var(--border); font-size:10px; color:var(--txt3); font-style:italic; }
+
+/* ══════════════════════════════════════════════════
+   S13 — TECH STACK
+══════════════════════════════════════════════════ */
+#s13 .stack-grid {
+  display:grid; grid-template-columns:repeat(2,1fr); gap:9px; margin-top:4px;
+}
+.stack-row {
+  display:flex; align-items:flex-start; gap:11px; padding:10px 12px;
+  background:rgba(139,92,246,.05); border:1px solid var(--bord2); border-left:3px solid var(--purple); border-radius:8px;
+}
+.stack-row .sr-label {
+  font-family:'Space Mono',monospace; font-size:9px; color:var(--purple);
+  letter-spacing:.05em; white-space:nowrap; min-width:72px; padding-top:1px;
+}
+.stack-row .sr-val { font-size:11px; color:var(--txt); line-height:1.5; }
+.stack-row .sr-val em { font-style:normal; color:var(--txt3); font-size:10px; display:block; }
+
+/* ══════════════════════════════════════════════════
+   S14 — SUMMARY
+══════════════════════════════════════════════════ */
+#s14 .sum-layout {
+  display:grid; grid-template-columns:1fr 1fr; gap:28px; align-items:start; margin-top:4px;
+}
+.sum-group-title {
+  font-family:'Space Mono',monospace; font-size:9px;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--txt3); margin-bottom:10px;
+}
+.sum-item { display:flex; gap:9px; padding:9px 0; border-bottom:1px solid var(--border); align-items:flex-start; }
+.sum-item:last-child { border-bottom:none; }
+.sum-item .si-dot { width:5px; height:5px; border-radius:50%; margin-top:6px; flex-shrink:0; }
+.sum-item p { font-size:11px; color:var(--txt2); margin:0; line-height:1.5; }
+.sum-item p strong { color:var(--txt); display:block; font-size:11px; margin-bottom:1px; }
+.tag-row { display:flex; gap:7px; flex-wrap:wrap; margin-top:20px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="tb-title" id="tb-title">DDT Reporting <em>Ecosystem</em></div>
+    <div style="flex:1"></div>
+    <div class="tb-counter"><span id="cur">1</span> / <span id="tot">14</span></div>
+    <div class="tb-bar" id="tb-bar"></div>
+  </div>
+
+  <!-- STAGE -->
+  <div id="stage">
+    <div id="slide-wrap">
+
+      <!-- ═══ S1 — TITLE ═══ -->
+      <div class="slide" id="s1">
+        <div class="inner">
+          <p class="eyebrow">Internal tooling · QA platform · v2</p>
+          <h1>DDT Reporting<br><em>Ecosystem</em></h1>
+          <p class="sub">Generate manual test reports, build and export DDT datasets, publish to GitHub, share with team, and browse reports in the browser — no downloading, no dependencies.</p>
+          <div class="tags">
+            <span class="tag">TestReport Builder</span>
+            <span class="tag green">Report Viewer</span>
+            <span class="tag purple">Git HTML Viewer</span>
+            <span class="tag amber">GitHub Integration</span>
+          </div>
+          <div class="ecosystem-chips stagger">
+            <div class="ec-chip" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--red)">
+              Allure Reporter
+            </div>
+            <div class="ec-chip" style="background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.25);color:var(--cyan)">
+              Postman Proxy
+            </div>
+            <div class="ec-chip" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--amber)">
+              CF Worker · git api proxy
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ S2 — PROBLEMS ═══ -->
+      <div class="slide" id="s2">
+        <div class="inner">
+          <div class="layout" style="display:grid;grid-template-columns:180px 1fr;gap:32px;align-items:start">
+            <div class="col-label">
+              <p class="eyebrow">Status quo</p>
+              <h2 style="font-size:28px;margin-bottom:6px">What's<em> broken</em></h2>
+              <p style="font-size:11px;color:var(--txt3);line-height:1.5">The current qMetry workflow creates more overhead than value for the team.</p>
+            </div>
+            <div class="stagger">
+              <div class="prob-card">
+                <strong>⏱️ Time-consuming workflow</strong>
+                <p>Manual test case creation does not scale — the same copy-paste operations repeat every sprint.</p>
+              </div>
+              <div class="prob-card">
+                <strong>🛠️ Tool limitations</strong>
+                <p>qMetry has no structured formatting — documenting request/response payloads is painful and error-prone.</p>
+              </div>
+              <div class="prob-card">
+                <strong>🔍 Inefficient review process</strong>
+                <p>Reviewing test cases in qMetry is slower than without it. The tool adds friction, not value.</p>
+              </div>
+              <div class="prob-card">
+                <strong>🚧 QA bottleneck</strong>
+                <p>QA became a delivery blocker. Technical debt grows while the team documents instead of shipping.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ S3 — ECOSYSTEM OVERVIEW ═══ -->
+      <div class="slide" id="s3">
+        <div class="inner" style="padding:28px 40px">
+          <p class="eyebrow">Three tools</p>
+          <h2 style="margin-bottom:10px">The <em>Ecosystem</em></h2>
+          <div class="eco-grid stagger">
+            <div class="eco-card eco-card--blue">
+              <span class="ec-num" style="color:var(--blue)">01 · CAPTURE &amp; BUILD</span>
+              <span class="ec-title" style="color:var(--blue)">TestReport Builder</span>
+              <span class="ec-file" style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:var(--blue)">testreport-builder.html</span>
+              <div class="ec-desc">MITM proxy captures Postman traffic. Test case editor. Execution Comments + Jira. Export dataset.json for DDT. HTML report generation. OAuth via Cloudflare Worker. Publish to GitHub.</div>
+              <div class="ec-tags">
+                <span class="tag" style="font-size:9px">MITM capture</span>
+                <span class="tag green" style="font-size:9px">GitHub API</span>
+                <span class="tag amber" style="font-size:9px">OAuth Worker</span>
+                <span class="tag red" style="font-size:9px">Jira</span>
+                <span class="tag cyan" style="font-size:9px">DDT export</span>
+                <span class="tag" style="font-size:9px">HTML report</span>
+              </div>
+            </div>
+            <div class="eco-card eco-card--green">
+              <span class="ec-num" style="color:var(--green)">02 · BROWSE &amp; FILTER</span>
+              <span class="ec-title" style="color:var(--green)">Report Viewer</span>
+              <span class="ec-file" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:var(--green)">report-viewer.html</span>
+              <div class="ec-desc">File browser for reports from a GitHub repository. Filters by app / API / executor / date / Jira. Tag cache in localStorage (tagsCache). Background sync every 5 min. OAuth via Cloudflare Worker for private repos.</div>
+              <div class="ec-tags">
+                <span class="tag green" style="font-size:9px">GitHub API</span>
+                <span class="tag amber" style="font-size:9px">OAuth Worker</span>
+                <span class="tag cyan" style="font-size:9px">Offline cache</span>
+              </div>
+            </div>
+            <div class="eco-card eco-card--purple">
+              <span class="ec-num" style="color:var(--purple)">03 · PREVIEW ANYWHERE</span>
+              <span class="ec-title" style="color:var(--purple)">Git HTML Viewer</span>
+              <span class="ec-file" style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);color:var(--purple)">gitHtml-viewer.html</span>
+              <div class="ec-desc">Render any HTML file from GitHub directly in the browser — no server. Drag-and-drop or URL input. Private repos via OAuth (CF Worker + sessionId). Shareable link in one click.</div>
+              <div class="ec-tags">
+                <span class="tag purple" style="font-size:9px">GitHub raw</span>
+                <span class="tag" style="font-size:9px">Drag & Drop</span>
+                <span class="tag amber" style="font-size:9px">OAuth Worker</span>
+              </div>
+            </div>
+          </div>
+          <div class="eco-bottom-note">
+            <span>🔗</span>
+            Three .html files, no npm dependencies, no deployment. Builder (with companion.exe for capture) publishes to GitHub → Report Viewer reads from GitHub → HTML Viewer renders directly.
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ S4 — WHAT IS BUILDER ═══ -->
+      <div class="slide" id="s4">
+        <div class="inner">
+          <div class="layout" style="display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:center;height:100%">
+            <div>
+              <p class="eyebrow">Tool #1</p>
+              <h2 style="font-size:28px;margin-bottom:10px">Test<em>Report</em> Builder</h2>
+              <p style="font-size:11px;color:var(--txt2);line-height:1.65;margin-bottom:16px">Lightweight QA tool for capturing, documenting, and exporting API test cases — a single HTML file with a Node.js companion proxy.</p>
+              <div class="what-point">
+                <span class="wp-icon">◈</span>
+                <span class="wp-body"><strong>qMetry replacement</strong>Structured documentation without overhead</span>
+              </div>
+              <div class="what-point">
+                <span class="wp-icon">◈</span>
+                <span class="wp-body"><strong>Capture from Postman</strong>Live proxy intercepts HTTP/HTTPS traffic via SSE</span>
+              </div>
+              <div class="what-point">
+                <span class="wp-icon">◈</span>
+                <span class="wp-body"><strong>DDT export</strong>dataset.json directly into Newman ddt-runner, no conversion</span>
+              </div>
+              <div class="what-point">
+                <span class="wp-icon">◈</span>
+                <span class="wp-body"><strong>Publish to GitHub</strong>Atomic commit via GitHub Trees API — report, execution, dataset</span>
+              </div>
+              <div class="what-point">
+                <span class="wp-icon">◈</span>
+                <span class="wp-body"><strong>Self-contained HTML report</strong>One file — no dependencies, no server</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="font-family:'Space Mono',monospace;font-size:8px;color:var(--txt3);letter-spacing:.08em">CAPTURE FLOW</div>
+              <div style="display:flex;align-items:center;gap:4px">
+                <div class="flow-block" style="flex:1;margin:0;background:rgba(6,182,212,.07);border:1px solid rgba(6,182,212,.22)">
+                  <div class="fb-title" style="color:var(--cyan)">POSTMAN</div>
+                  <div class="fb-sub">HTTP / HTTPS</div>
+                </div>
+                <div style="color:var(--txt3);font-size:14px;flex-shrink:0;line-height:1">→</div>
+                <div class="flow-block" style="flex:1;margin:0;background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.22)">
+                  <div class="fb-title" style="color:var(--blue)">COMPANION.JS</div>
+                  <div class="fb-sub">MITM :8888 · SSE :8889</div>
+                </div>
+                <div style="color:var(--txt3);font-size:14px;flex-shrink:0;line-height:1">→</div>
+                <div class="flow-block" style="flex:1;margin:0;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.22)">
+                  <div class="fb-title" style="color:var(--green)">BUILDER UI</div>
+                  <div class="fb-sub">Capture · Edit · Export</div>
+                </div>
+              </div>
+              <div style="font-family:'Space Mono',monospace;font-size:8px;color:var(--txt3);letter-spacing:.08em;margin-top:6px">AUTH + PUBLISH</div>
+              <div style="display:flex;align-items:center;gap:4px">
+                <div class="flow-block" style="flex:1;margin:0;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.22)">
+                  <div class="fb-title" style="color:var(--green)">BUILDER UI</div>
+                  <div class="fb-sub">sessionId · ghFetch()</div>
+                </div>
+                <div style="color:var(--txt3);font-size:14px;flex-shrink:0;line-height:1">↔</div>
+                <div class="flow-block" style="flex:1;margin:0;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.22)">
+                  <div class="fb-title" style="color:var(--amber)">CF WORKER</div>
+                  <div class="fb-sub">OAuth · D1 · API proxy</div>
+                </div>
+                <div style="color:var(--txt3);font-size:14px;flex-shrink:0;line-height:1">→</div>
+                <div class="flow-block" style="flex:1;margin:0;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.22)">
+                  <div class="fb-title" style="color:var(--amber)">GITHUB</div>
+                  <div class="fb-sub">Repo · API · OAuth</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ S5 — BUILDER CORE FEATURES ═══ -->
+      <div class="slide" id="s5">
+        <div class="inner" style="padding:24px 36px">
+          <p class="eyebrow">Builder features</p>
+          <h2 style="margin-bottom:10px">Core Features</h2>
+          <div class="feat-grid stagger">
+            <div class="feat-card feat-card--cyan">
+              <strong>🔐 MITM Proxy + SSE</strong>
+              <p>Auto-generated CA certificate. HTTP/HTTPS intercept on :8888. SSE streams captured requests/responses to UI without polling. No Postman plugins needed.</p>
+            </div>
+            <div class="feat-card feat-card--green">
+              <strong>📋 HTML Report Export</strong>
+              <p>Self-contained HTML with syntax highlighting, Dashboard + Detailed View + comments tab.</p>
+            </div>
+            <div class="feat-card feat-card--green">
+              <strong>📊 DDT Dataset Export</strong>
+              <p>dataset.json in DDT contract format — directly into Newman/ddt-runner without modification.</p>
+            </div>
+            <div class="feat-card">
+              <strong>✏️ Manual Builder Mode</strong>
+              <p>Copy-paste from Postman into Builder UI when proxy capture is not needed.</p>
+            </div>
+            <div class="feat-card feat-card--amber">
+              <strong>💾 Session Save</strong>
+              <p>execution.json saves full state — pause at any point, resume from the same place. Includes comments and screenshots.</p>
+            </div>
+            <div class="feat-card feat-card--amber">
+              <strong>⬆️ Git Sync</strong>
+              <p>Atomic commit of report + execution + dataset to GitHub in one click.</p>
+            </div>
+            <div class="feat-card feat-card--purple">
+              <strong>📈 Allure Reporter</strong>
+              <p>Custom Newman reporter generates Allure-compatible XML with history, trends, and attachments.</p>
+            </div>
+            <div class="feat-card" style="border-color:rgba(59,130,246,.22);background:rgba(59,130,246,.05)">
+              <strong style="color:var(--blue)">💬 Execution Comments</strong>
+              <p>Up to 700 chars per test case. Paste screenshots via Ctrl+V — base64 inline. Lightbox with zoom and drag/pan. Not exported to dataset.</p>
+            </div>
+            <div class="feat-card feat-card--cyan">
+              <strong>📊 Dynatrace Logs</strong>
+              <p>Attach logs to a test case. Structured-log parsing — auto-highlights errors, traces, and timestamps.</p>
+            </div>
+            <div class="feat-card" style="border-color:rgba(239,68,68,.22);background:rgba(239,68,68,.05)">
+              <strong style="color:var(--red)">🔗 Jira Linking</strong>
+              <p>Link a Jira ticket to the report via the trb-jira tag. Report Viewer displays the link. Multiple tickets separated by comma.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ S6 — GIT INTEGRATION ═══ -->
+      <div class="slide" id="s6">
+        <div class="inner" style="padding:28px 44px">
+          <p class="eyebrow">GitHub without a git client</p>
+          <h2 style="margin-bottom:8px">Git <em>Integration</em></h2>
+          <div class="git-layout">
+            <div class="git-phase-list stagger">
+              <div class="git-phase">
+                <span class="gp-num">01</span>
+                <span class="gp-text"><strong>Sign in with GitHub — once, all three tools</strong>Click "Sign In" → enter the code at github.com/login/device → done. No passwords, no tokens stored in the app. Session lasts 8 hours. All three tools (Builder, Report Viewer, HTML Viewer) share the same login.</span>
+              </div>
+              <div class="git-phase">
+                <span class="gp-num">02</span>
+                <span class="gp-text"><strong>Secure access to private repositories</strong>The GitHub token is stored encrypted in the cloud (Cloudflare) — the browser never sees it. Private repositories work transparently. Public repos work with no auth at all.</span>
+              </div>
+              <div class="git-phase">
+                <span class="gp-num">03</span>
+                <span class="gp-text"><strong>Publish to GitHub — no git client, no terminal</strong>Select what to publish: report, execution file, dataset. Click "Sync" — everything is saved to GitHub in one atomic commit. The report link is ready immediately after.</span>
+              </div>
+              <div class="git-phase">
+                <span class="gp-num">04</span>
+                <span class="gp-text"><strong>Resume an interrupted session</strong>"Open from Git" shows a list of previous executions from the repository. One click — Builder restores all test cases with their results. Useful when a testing cycle is interrupted.</span>
+              </div>
+              <div class="git-phase">
+                <span class="gp-num">05</span>
+                <span class="gp-text"><strong>Share a report instantly</strong>After publishing, the "Share" button generates a direct link. The recipient opens the report in the browser immediately — no download required.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ S8 — ARCHITECTURE ═══ -->
+      <div class="slide" id="s8">
+        <div class="inner" style="padding:28px 44px">
+          <p class="eyebrow">System design</p>
+          <h2 style="margin-bottom:10px">High-Level <em>Architecture</em></h2>
+          <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:stretch;gap:0;margin-top:8px">
+            <!-- TOOLS: capture path + browser tools -->
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="font-family:'Space Mono',monospace;font-size:8px;color:var(--txt3);letter-spacing:.07em;margin-bottom:1px">TOOLS</div>
+              <!-- Capture path — Builder only -->
+              <div style="display:flex;align-items:center;gap:4px;padding:6px 8px;background:rgba(6,182,212,.04);border:1px solid rgba(6,182,212,.14);border-radius:7px">
+                <div style="text-align:center;flex:1">
+                  <div style="font-size:9px;font-weight:600;color:var(--cyan)">Postman</div>
+                  <div style="font-size:8px;color:var(--txt3)">HTTP/HTTPS</div>
+                </div>
+                <div style="font-size:10px;color:var(--txt3);flex-shrink:0">→</div>
+                <div style="text-align:center;flex:1">
+                  <div style="font-size:9px;font-weight:600;color:var(--blue)">companion.exe</div>
+                  <div style="font-size:8px;color:var(--txt3)">MITM :8888 · SSE</div>
+                </div>
+              </div>
+              <div style="text-align:center;font-size:10px;color:var(--txt3);line-height:1">↓ <span style="font-family:'Space Mono',monospace;font-size:7px">capture</span></div>
+              <!-- Builder UI -->
+              <div class="arch-block arch-block--green" style="padding:9px 10px">
+                <div class="ab-title">Builder UI</div>
+                <div class="ab-item">Capture · Edit · Export</div>
+                <div class="ab-item">report.html · Git Sync ⬆</div>
+              </div>
+              <!-- Divider showing viewers also connect -->
+              <div style="display:flex;align-items:center;gap:5px;padding:0 2px">
+                <div style="height:1px;flex:1;background:rgba(139,92,246,.2)"></div>
+                <div style="font-family:'Space Mono',monospace;font-size:7px;color:rgba(139,92,246,.55);white-space:nowrap">↔ CF Worker</div>
+                <div style="height:1px;flex:1;background:rgba(139,92,246,.2)"></div>
+              </div>
+              <!-- Viewers -->
+              <div class="arch-block arch-block--purple" style="padding:8px 10px">
+                <div class="ab-title">Report Viewer</div>
+                <div class="ab-item">browse+filter · Jira</div>
+              </div>
+              <div class="arch-block arch-block--purple" style="padding:8px 10px">
+                <div class="ab-title">HTML Viewer</div>
+                <div class="ab-item">URL/drag-drop · iframe</div>
+              </div>
+            </div>
+            <!-- Arrow ↔ left–center: vertical bus bar shows all 3 tools connect -->
+            <div style="display:flex;flex-direction:column;align-items:center;padding:0 6px;gap:0">
+              <div style="width:1px;flex:1;background:rgba(255,255,255,.1)"></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0">
+                <div style="font-size:16px;color:var(--txt2);line-height:1">↔</div>
+                <div style="font-family:'Space Mono',monospace;font-size:7px;color:var(--txt3);white-space:nowrap;text-align:center">OAuth<br>API proxy</div>
+              </div>
+              <div style="width:1px;flex:1;background:rgba(255,255,255,.1)"></div>
+            </div>
+            <!-- CLOUD AUTH -->
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="font-family:'Space Mono',monospace;font-size:8px;color:var(--txt3);letter-spacing:.07em;margin-bottom:1px">CLOUD AUTH</div>
+              <div class="arch-block" style="background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.22)">
+                <div class="ab-title" style="color:var(--amber)">Cloudflare Worker <span style="font-weight:normal;font-size:8px;color:var(--txt3)">(git api proxy)</span></div>
+                <div class="ab-item">POST /auth/start</div>
+                <div class="ab-item">GET /auth/poll?sid=</div>
+                <div class="ab-item">GET /api/github/*</div>
+              </div>
+              <div style="text-align:center;font-size:12px;color:var(--txt3);line-height:1.2">↕</div>
+              <div class="arch-block" style="background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.22)">
+                <div class="ab-title" style="color:var(--amber)">D1 SQLite</div>
+                <div class="ab-item">user_sessions · TTL 8h</div>
+                <div class="ab-item">AES-GCM 256-bit</div>
+                <div class="ab-item">auth_polling · TTL 15m</div>
+              </div>
+              <div style="text-align:center;font-size:12px;color:var(--txt3);line-height:1.2">↕</div>
+              <div class="arch-block" style="background:rgba(6,182,212,.06);border-color:rgba(6,182,212,.22)">
+                <div class="ab-title" style="color:var(--cyan)">GitHub OAuth</div>
+                <div class="ab-item">Device Flow</div>
+                <div class="ab-item">github.com/login/device</div>
+              </div>
+            </div>
+            <!-- Arrow ↔ center–right: top-aligned to match CF Worker block position -->
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:0 8px;padding-top:20px;gap:4px">
+              <div style="font-size:16px;color:var(--txt2);line-height:1">↔</div>
+              <div style="font-family:'Space Mono',monospace;font-size:7px;color:var(--txt3);white-space:nowrap;text-align:center">GitHub<br>API v3</div>
+            </div>
+            <!-- GITHUB -->
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="font-family:'Space Mono',monospace;font-size:8px;color:var(--txt3);letter-spacing:.07em;margin-bottom:1px">GITHUB</div>
+              <div class="arch-block" style="background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.22)">
+                <div class="ab-title" style="color:var(--amber)">GitHub Repo</div>
+                <div class="ab-item">reports/*.html</div>
+                <div class="ab-item">executions/*.json</div>
+                <div class="ab-item">datasets/*.json</div>
+              </div>
+            </div>
+          </div>
+          <div class="arch-note" style="margin-top:8px">
+            <span>🔐</span>
+            The OAuth token never leaves D1 — the browser receives only the <code style="font-size:9px">sessionId</code> (UUID). All three tools share a single Cloudflare Worker.
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ S9 — REPORT VIEWER ═══ -->
+      <div class="slide" id="s9">
+        <div class="inner" style="padding:28px 44px">
+          <p class="eyebrow">Tool #2</p>
+          <h2 style="margin-bottom:10px">Report <em>Viewer</em></h2>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:4px" class="stagger">
+            <div class="vf-item">
+              <span class="vi-icon">🗂️</span>
+              <span class="vi-text"><strong>Centralised report archive</strong>All published reports from the GitHub repository in one place. Folder structure with status (passed / failed / skipped) shown next to each file.</span>
+            </div>
+            <div class="vf-item">
+              <span class="vi-icon">🔍</span>
+              <span class="vi-text"><strong>Smart filters</strong>Find any report by app, API endpoint, executor, date, or Jira ticket. Filters combine and apply simultaneously.</span>
+            </div>
+            <div class="vf-item">
+              <span class="vi-icon">🔄</span>
+              <span class="vi-text"><strong>Always up to date</strong>The list refreshes automatically every 5 minutes. New reports appear after publishing without a page reload.</span>
+            </div>
+            <div class="vf-item">
+              <span class="vi-icon">💾</span>
+              <span class="vi-text"><strong>Local disk repository</strong>Connect a local reports folder — same filter and browse interface, no GitHub required. Useful for isolated environments or local archives.</span>
+            </div>
+            <div class="vf-item">
+              <span class="vi-icon">🔗</span>
+              <span class="vi-text"><strong>Jira inline in the tree</strong>The linked ticket is visible next to the report file. Click to open Jira — no separate window search needed.</span>
+            </div>
+            <div class="vf-item">
+              <span class="vi-icon">👁️</span>
+              <span class="vi-text"><strong>Preview without downloading</strong>Click a report to render it directly in the browser. Open in a new tab or copy the link to share with a colleague.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ S10 — GIT HTML VIEWER ═══ -->
+      <div class="slide" id="s10">
+        <div class="inner" style="padding:28px 44px">
+          <p class="eyebrow">Tool #3</p>
+          <h2 style="margin-bottom:10px">Git HTML <em>Viewer</em></h2>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:4px" class="stagger">
+            <div class="hf-item">
+              <span class="hi-icon">🌐</span>
+              <span class="hi-text"><strong>GitHub HTML URL rendering</strong>Paste a GitHub URL (blob or raw) — Viewer fetches the file via raw API and renders it in an iframe. No server needed.</span>
+            </div>
+            <div class="hf-item">
+              <span class="hi-icon">📂</span>
+              <span class="hi-text"><strong>Drag &amp; Drop</strong>Drag a .html file into the drop zone — instant preview without uploading to GitHub.</span>
+            </div>
+            <div class="hf-item">
+              <span class="hi-icon">🔑</span>
+              <span class="hi-text"><strong>OAuth Sign In (optional)</strong>Device Flow via Cloudflare Worker → sessionId in localStorage. Public repositories work without authentication.</span>
+            </div>
+            <div class="hf-item">
+              <span class="hi-icon">🔗</span>
+              <span class="hi-text"><strong>Shareable links</strong>URL is preserved in the address bar. Buttons: New / Copy URL / Open GitHub. The recipient opens the same report.</span>
+            </div>
+            <div class="hf-item">
+              <span class="hi-icon">🔒</span>
+              <span class="hi-text"><strong>iframe sandbox</strong>Report renders in an isolated iframe without allow-same-origin. CSP-safe for embedded viewing.</span>
+            </div>
+            <div class="hf-item">
+              <span class="hi-icon">🔁</span>
+              <span class="hi-text"><strong>Builder integration</strong>After publishing a report, Builder automatically generates the Viewer link. From final commit to team review — one button, no intermediate steps.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ S11 — USAGE SCENARIOS ═══ -->
+      <div class="slide" id="s11">
+        <div class="inner" style="padding:26px 44px">
+          <p class="eyebrow">Usage scenarios</p>
+          <h2 style="margin-bottom:10px">Usage <em>Scenarios</em></h2>
+          <div class="stagger">
+            <div class="sc-card">
+              <div class="sc-label">📝 S1<br>Manual Entry</div>
+              <div class="sc-flow">
+                Run in Postman <span class="arr">→</span> Copy-paste into Builder <span class="arr">→</span> Export dataset.json + HTML report
+              </div>
+            </div>
+            <div class="sc-card">
+              <div class="sc-label">📡 S2<br>Proxy Capture</div>
+              <div class="sc-flow">
+                Start companion.exe <span class="arr">→</span> Route Postman :8888 <span class="arr">→</span> Live capture in Builder UI <span class="arr">→</span> Export / Report
+              </div>
+            </div>
+            <div class="sc-card">
+              <div class="sc-label">⬆️ S3<br>Git Publish</div>
+              <div class="sc-flow">
+                Builder: fill in results <span class="arr">→</span> Git Sync (Report + Exec) <span class="arr">→</span> Commit → Share link
+              </div>
+            </div>
+            <div class="sc-card sc-viewer">
+              <div class="sc-label">🗂️ S4<br>Report Viewer</div>
+              <div class="sc-flow">
+                Open report-viewer.html <span class="arr">→</span> Configure GitHub repo <span class="arr">→</span> Browse + Filter + Click → iframe preview
+              </div>
+            </div>
+            <div class="sc-card sc-htmlv">
+              <div class="sc-label">🌐 S5<br>HTML Viewer</div>
+              <div class="sc-flow">
+                Get Share link from Builder <span class="arr">→</span> Open gitHtml-viewer.html?url=… <span class="arr">→</span> Report in browser
+              </div>
+            </div>
+            <div class="sc-card future">
+              <div class="sc-label">🤖 S6 &nbsp;<span class="tag future" style="font-size:8px;vertical-align:middle">Future</span><br>DDT Skill</div>
+              <div class="sc-flow">
+                API docs (Confluence / spec) <span class="arr">→</span> /ddt-data-generator <span class="arr">→</span> Open dataset.json in Builder
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ S12 — DDT INTEGRATION ═══ -->
+      <div class="slide" id="s12">
+        <div class="inner">
+          <p class="eyebrow">Data-Driven Testing</p>
+          <h2>DDT Framework <em>Integration</em></h2>
+          <div class="ddt-grid">
+            <div>
+              <div class="ddt-col-title" style="color:var(--cyan)">Dataset lifecycle</div>
+              <div class="ddt-step">
+                <span class="ds-num">01</span>
+                <span class="ds-text"><strong>Capture or build</strong>Intercept via proxy or manual entry in Builder UI</span>
+              </div>
+              <div class="ddt-step">
+                <span class="ds-num">02</span>
+                <span class="ds-text"><strong>Export dataset.json</strong>Builder serialises to DDT contract format</span>
+              </div>
+              <div class="ddt-step">
+                <span class="ds-num">03</span>
+                <span class="ds-text"><strong>Run with Newman</strong>dataset.json → ddt-runner — no modifications needed</span>
+              </div>
+              <div class="ddt-step">
+                <span class="ds-num">04</span>
+                <span class="ds-text"><strong>Generate HTML report</strong>Execution results → Builder → Git Sync → Share</span>
+              </div>
+              <div class="ddt-step">
+                <span class="ds-num">05</span>
+                <span class="ds-text"><strong>Browse in Viewer</strong>Report Viewer filters by app / API / executor / date</span>
+              </div>
+            </div>
+            <div class="skill-box">
+              <div class="sb-header">
+                <span class="sb-title">/ddt-data-generator</span>
+                <span class="sb-badge">Claude skill</span>
+                <span class="tag future" style="font-size:9px">Future</span>
+              </div>
+              <div class="skill-step">
+                <span class="ss-icon">📄</span>
+                <span class="ss-text"><strong>Input</strong>API docs — Confluence, OpenAPI spec, plain text</span>
+              </div>
+              <div class="skill-step">
+                <span class="ss-icon">🤖</span>
+                <span class="ss-text"><strong>Generate</strong>Auto-build parameterised test cases</span>
+              </div>
+              <div class="skill-step">
+                <span class="ss-icon">🔄</span>
+                <span class="ss-text"><strong>Sync</strong>Run against API → real response_string values</span>
+              </div>
+              <div class="skill-step">
+                <span class="ss-icon">📥</span>
+                <span class="ss-text"><strong>Import</strong>Open dataset.json in Builder → validate → export</span>
+              </div>
+              <div class="sb-note">★ Planned — not yet in production</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ S13 — TECH STACK ═══ -->
+      <div class="slide" id="s13">
+        <div class="inner">
+          <p class="eyebrow">Implementation</p>
+          <h2>Technical <em>Stack</em></h2>
+          <div class="stack-grid stagger">
+            <div class="stack-row">
+              <span class="sr-label">RUNTIME</span>
+              <span class="sr-val">companion.exe<em>No external packages — self-contained executable</em></span>
+            </div>
+            <div class="stack-row">
+              <span class="sr-label">INTERCEPT</span>
+              <span class="sr-val">companion.exe MITM · node-forge · native http/https/net/tls<em>TLS termination :8888 · keypair reuse per host · SSE keepalive</em></span>
+            </div>
+            <div class="stack-row">
+              <span class="sr-label">AUTH</span>
+              <span class="sr-val">OAuth Device Flow · Cloudflare Worker · D1 SQLite<em>AES-GCM 256-bit token · sessionId in browser · TTL 8h</em></span>
+            </div>
+            <div class="stack-row">
+              <span class="sr-label">STREAMING</span>
+              <span class="sr-val">Server-Sent Events (SSE) :8889 · AbortController polling<em>Push captured events to UI without polling</em></span>
+            </div>
+            <div class="stack-row">
+              <span class="sr-label">FRONTEND</span>
+              <span class="sr-val">Vanilla JS · HTML5 · CSS custom properties · system fonts<em>No build step, no framework, no dependencies, no CDN</em></span>
+            </div>
+            <div class="stack-row">
+              <span class="sr-label">GITHUB</span>
+              <span class="sr-val">REST API v3 · Git Trees API · OAuth (not PAT)<em>Atomic commit 4 requests · cache-busting · 422-retry × 3</em></span>
+            </div>
+            <div class="stack-row">
+              <span class="sr-label">STORAGE</span>
+              <span class="sr-val">localStorage (sessionId, tagsCache) · IndexedDB (folder handle FS)<em>File System Access API · SHA delta · offline folder cache</em></span>
+            </div>
+            <div class="stack-row">
+              <span class="sr-label">REPORT</span>
+              <span class="sr-val">Self-contained HTML · iframe render in Viewer · Execution + Jira meta tags<em>Inline JS + CSS — one file, no server</em></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ S14 — SUMMARY ═══ -->
+      <div class="slide" id="s14">
+        <div class="inner">
+          <p class="eyebrow">Summary</p>
+          <h2>Everything <em>in one ecosystem</em></h2>
+          <div class="sum-layout stagger">
+            <div>
+              <div class="sum-group-title" style="color:var(--blue)">What it solves</div>
+              <div class="sum-item">
+                <div class="si-dot" style="background:var(--red)"></div>
+                <p><strong>Replaces qMetry</strong>No more manual copy-paste documentation every sprint</p>
+              </div>
+              <div class="sum-item">
+                <div class="si-dot" style="background:var(--green)"></div>
+                <p><strong>Restores QA velocity</strong>QA focuses on quality, not tooling bureaucracy</p>
+              </div>
+              <div class="sum-item">
+                <div class="si-dot" style="background:var(--amber)"></div>
+                <p><strong>Centralised archive</strong>All reports in GitHub. Report Viewer is the single access point for test history</p>
+              </div>
+              <div class="sum-item">
+                <div class="si-dot" style="background:var(--purple)"></div>
+                <p><strong>Execution context</strong>Execution Comments + Dynatrace logs + Jira links directly in the report</p>
+              </div>
+            </div>
+            <div>
+              <div class="sum-group-title" style="color:var(--purple)">Key properties</div>
+              <div class="sum-item">
+                <div class="si-dot" style="background:var(--blue)"></div>
+                <p><strong>3 tools, 0 dependencies</strong>Each is a single .html file. No npm install for the UI</p>
+              </div>
+              <div class="sum-item">
+                <div class="si-dot" style="background:var(--amber)"></div>
+                <p><strong>OAuth via Cloudflare Worker</strong>Sign in with GitHub once for all three tools. Token encrypted in the cloud, only session ID in the browser.</p>
+              </div>
+              <div class="sum-item">
+                <div class="si-dot" style="background:var(--cyan)"></div>
+                <p><strong>GitHub without a git client or terminal</strong>Publish report, session, and dataset in one click from Builder. No installation, no Git knowledge required.</p>
+              </div>
+              <div class="sum-item">
+                <div class="si-dot" style="background:var(--txt3)"></div>
+                <p><strong>/ddt-data-generator &nbsp;<span class="tag future">Future</span></strong>AI-generated datasets from API documentation</p>
+              </div>
+            </div>
+          </div>
+          <div class="tag-row">
+            <span class="tag cyan">3 tools</span>
+            <span class="tag green">GitHub integration</span>
+            <span class="tag amber">OAuth · CF Worker</span>
+            <span class="tag purple">Zero dependencies</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /slide-wrap -->
+  </div><!-- /stage -->
+
+  <!-- BOTTOMBAR -->
+  <div id="bottombar">
+    <button class="nav-btn" id="btn-first" title="First">⏮</button>
+    <button class="nav-btn" id="btn-prev"  title="Prev (←)">←</button>
+    <div class="dot-nav" id="dot-nav"></div>
+    <button class="nav-btn" id="btn-next"  title="Next (→)">→</button>
+    <button class="nav-btn" id="btn-last"  title="Last">⏭</button>
+    <div class="kb-hint">
+      <span class="key">←</span><span class="key">→</span> navigate &nbsp;
+      <span class="key">F</span> fullscreen
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+const SLIDES = [
+  { id:"s1",  title:"DDT Reporting Ecosystem" },
+  { id:"s2",  title:"What's broken — current approach" },
+  { id:"s3",  title:"The Ecosystem — three tools" },
+  { id:"s4",  title:"TestReport Builder — what it is" },
+  { id:"s5",  title:"Builder — Core Features" },
+  { id:"s6",  title:"Git Integration" },
+  { id:"s8",  title:"High-Level Architecture" },
+  { id:"s9",  title:"Report Viewer" },
+  { id:"s10", title:"Git HTML Viewer" },
+  { id:"s11", title:"Usage Scenarios" },
+  { id:"s12", title:"DDT Framework Integration" },
+  { id:"s13", title:"Technical Stack" },
+  { id:"s14", title:"Summary" },
+];
+
+const N = SLIDES.length;
+let cur = 0, animTimer = null;
+
+const slideEls = SLIDES.map(s => document.getElementById(s.id));
+const elCur    = document.getElementById("cur");
+const elTitle  = document.getElementById("tb-title");
+const elBar    = document.getElementById("tb-bar");
+const dotNav   = document.getElementById("dot-nav");
+const btnFirst = document.getElementById("btn-first");
+const btnPrev  = document.getElementById("btn-prev");
+const btnNext  = document.getElementById("btn-next");
+const btnLast  = document.getElementById("btn-last");
+
+document.getElementById("tot").textContent = N;
+
+SLIDES.forEach((_,i) => {
+  const d = document.createElement("div");
+  d.className = "dot" + (i===0?" active":"");
+  d.addEventListener("click", ()=>goTo(i));
+  dotNav.appendChild(d);
+});
+
+function clearAnim(el){
+  el.classList.remove("slide-enter","slide-enter-back","slide-exit","slide-exit-back");
+}
+
+function goTo(target){
+  if(target===cur || target<0 || target>=N) return;
+  if(animTimer){ clearTimeout(animTimer); animTimer=null; }
+  const from=slideEls[cur], to=slideEls[target];
+  const back = target<cur;
+  clearAnim(from); clearAnim(to);
+  from.classList.remove("active");
+  from.classList.add(back?"slide-exit-back":"slide-exit");
+  setTimeout(()=>clearAnim(from), 380);
+  cur = target;
+  to.classList.add("active", back?"slide-enter-back":"slide-enter");
+  animTimer = setTimeout(()=>{ clearAnim(to); animTimer=null; }, 480);
+  updateUI();
+}
+
+function next(){ goTo(cur+1); }
+function prev(){ goTo(cur-1); }
+
+function updateUI(){
+  elCur.textContent   = cur+1;
+  elTitle.textContent = SLIDES[cur].title;
+  elBar.style.width   = ((cur+1)/N*100)+"%";
+  dotNav.querySelectorAll(".dot").forEach((d,i)=>d.classList.toggle("active",i===cur));
+  btnFirst.disabled = btnPrev.disabled = (cur===0);
+  btnNext.disabled  = btnLast.disabled = (cur===N-1);
+}
+
+btnNext.addEventListener("click", next);
+btnPrev.addEventListener("click", prev);
+btnFirst.addEventListener("click",()=>goTo(0));
+btnLast.addEventListener("click", ()=>goTo(N-1));
+
+document.addEventListener("keydown", e=>{
+  if(e.key==="ArrowRight"||e.key==="ArrowDown"){ e.preventDefault(); next(); }
+  if(e.key==="ArrowLeft" ||e.key==="ArrowUp")  { e.preventDefault(); prev(); }
+  if(e.key==="f"||e.key==="F"){
+    document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
+  }
+  if(e.key==="Home") goTo(0);
+  if(e.key==="End")  goTo(N-1);
+});
+
+let tx=0;
+document.getElementById("stage").addEventListener("touchstart",e=>{ tx=e.changedTouches[0].clientX; },{passive:true});
+document.getElementById("stage").addEventListener("touchend",  e=>{
+  const dx=e.changedTouches[0].clientX-tx;
+  if(Math.abs(dx)>44) dx<0?next():prev();
+},{passive:true});
+
+slideEls[0].classList.add("active");
+updateUI();
+
+function scale(){
+  const stage = document.getElementById("stage");
+  const wrap  = document.getElementById("slide-wrap");
+  const W=900, H=540;
+  const sw = stage.clientWidth  - 32;
+  const sh = stage.clientHeight - 24;
+  const s  = Math.min(sw/W, sh/H, 1);
+  wrap.style.transform       = "scale("+s+")";
+  wrap.style.transformOrigin = "center center";
+  wrap.style.marginTop       = ((H*s-H)/2)+"px";
+  wrap.style.marginLeft      = ((W*s-W)/2)+"px";
+}
+window.addEventListener("resize", scale);
+scale();
+</script>
+</body>
+</html>

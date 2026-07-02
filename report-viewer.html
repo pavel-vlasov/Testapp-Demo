@@ -1,0 +1,2410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report Viewer</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #FFFFFF;
+  --bg-alt:      #F5F6F8;
+  --bg-sidebar:  #F0F2F5;
+  --border:      #DDE1E7;
+  --border-focus:#3B82F6;
+  --text:        #111827;
+  --text-2:      #4B5563;
+  --text-3:      #9CA3AF;
+  --primary:     #3B82F6;
+  --primary-h:   #2563EB;
+  --primary-bg:  #EFF6FF;
+  --success:     #059669;
+  --success-bg:  #ECFDF5;
+  --error:       #DC2626;
+  --error-bg:    #FEF2F2;
+  --warn:        #D97706;
+  --warn-bg:     #FFFBEB;
+  --skip:        #7C3AED;
+  --skip-bg:     #F5F3FF;
+  --radius:      8px;
+  --radius-sm:   5px;
+}
+
+[data-theme="dark"] {
+  --bg:          #1A1D23;
+  --bg-alt:      #25282F;
+  --bg-sidebar:  #20232A;
+  --border:      #373D47;
+  --border-focus:#60A5FA;
+  --text:        #F3F4F6;
+  --text-2:      #D1D5DB;
+  --text-3:      #9CA3AF;
+  --primary:     #60A5FA;
+  --primary-h:   #93C5FD;
+  --primary-bg:  #1E3A8A;
+  --success:     #10B981;
+  --success-bg:  #064E3B;
+  --error:       #EF4444;
+  --error-bg:    #7F1D1D;
+  --warn:        #F59E0B;
+  --warn-bg:     #78350F;
+  --skip:        #A78BFA;
+  --skip-bg:     #2E1065;
+}
+
+body {
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: background .2s, color .2s;
+}
+
+/* ── Topbar ── */
+.topbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 16px; height: 48px;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.logo { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -.3px; white-space: nowrap; }
+.logo span { color: var(--primary); }
+.repo-pill {
+  display: flex; align-items: center; gap: 5px;
+  padding: 0 10px; height: 28px; border-radius: var(--radius-sm);
+  background: var(--bg-alt); border: 1px solid var(--border);
+  font-size: 11px; font-family: 'JetBrains Mono', ui-monospace, Consolas, 'Courier New', monospace; color: var(--text-2);
+  cursor: pointer; transition: background .12s; white-space: nowrap; max-width: 240px; overflow: hidden;
+}
+.repo-pill:hover { background: var(--bg); border-color: var(--text-3); }
+.repo-pill-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spacer { flex: 1; }
+.sync-progress { display: none; align-items: center; gap: 8px; font-size: 11px; color: var(--text-3); }
+.sync-progress.visible { display: flex; }
+.progress-bar { width: 100px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.topbar-btn {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 0 10px; height: 28px; border-radius: var(--radius-sm);
+  background: var(--bg-alt); border: 1px solid var(--border);
+  font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer;
+  transition: background .12s, color .12s; white-space: nowrap; font-family: inherit;
+}
+.topbar-btn:hover { background: var(--bg); color: var(--text); border-color: var(--text-3); }
+.topbar-btn.icon-only { padding: 0; width: 28px; }
+.topbar-btn svg { flex-shrink: 0; }
+.spinning { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Layout ── */
+.layout { display: flex; flex: 1; min-height: 0; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 240px; flex-shrink: 0; min-height: 0;
+  background: var(--bg-sidebar); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  transition: width .2s, opacity .2s;
+}
+.sidebar.hidden { width: 0; opacity: 0; overflow: hidden; }
+.sidebar.resizing { transition: none; }
+
+/* ── Sidebar resize handle ── */
+.sidebar-resizer {
+  width: 4px; flex-shrink: 0; cursor: col-resize;
+  background: transparent; transition: background .15s;
+  position: relative; z-index: 10;
+}
+.sidebar-resizer:hover, .sidebar-resizer.dragging { background: var(--primary); }
+.sidebar.hidden + .sidebar-resizer { display: none; }
+
+.sidebar-search { padding: 10px 10px 6px; border-bottom: 1px solid var(--border); }
+.search-wrap {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 8px; height: 30px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg); transition: border-color .15s;
+}
+.search-wrap:focus-within { border-color: var(--border-focus); }
+.search-wrap svg { flex-shrink: 0; color: var(--text-3); }
+.search-input {
+  border: none; background: transparent; outline: none;
+  font-family: inherit; font-size: 12px; color: var(--text); width: 100%;
+}
+.search-input::placeholder { color: var(--text-3); }
+
+/* ── Filter button + dropdown ── */
+.filter-bar {
+  padding: 6px 8px; border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.filter-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px; width: 100%; cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg); color: var(--text-2); font-size: 11px; font-weight: 600;
+  font-family: inherit; transition: background .12s, border-color .12s;
+}
+.filter-btn:hover { background: var(--bg-alt); border-color: var(--text-3); }
+.filter-btn.has-filters { background: var(--primary-bg); border-color: #bfdbfe; color: var(--primary); }
+.filter-count {
+  margin-left: auto; background: var(--primary); color: #fff;
+  border-radius: 8px; padding: 0 5px; font-size: 9px; font-weight: 700;
+}
+.filter-dropdown {
+  display: none; position: absolute; left: 8px; right: 8px; top: calc(100% + 2px);
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); z-index: 50; padding: 10px 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+}
+.filter-dropdown.open { display: block; }
+.fd-search-wrap {
+  display: flex; align-items: center; gap: 5px;
+  margin: 0 10px 8px; padding: 4px 8px; height: 28px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-alt);
+}
+.fd-search-wrap:focus-within { border-color: var(--border-focus); }
+.fd-search-input {
+  border: none; background: transparent; outline: none;
+  font-family: inherit; font-size: 11px; color: var(--text); width: 100%;
+}
+.fd-search-input::placeholder { color: var(--text-3); }
+.fd-section { padding: 0 10px 8px; }
+.fd-section + .fd-section { border-top: 1px solid var(--border); padding-top: 8px; }
+.fd-section-title {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--text-3); margin-bottom: 5px;
+}
+.fd-tags { display: flex; flex-wrap: wrap; gap: 4px; max-height: 80px; overflow-y: auto; }
+.fd-tags::-webkit-scrollbar { width: 3px; }
+.fd-tags::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+.fd-tag {
+  padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600;
+  border: 1px solid var(--border); color: var(--text-2); background: var(--bg-alt);
+  cursor: pointer; white-space: nowrap; transition: background .1s, color .1s, border-color .1s;
+}
+.fd-tag:hover { border-color: var(--text-3); color: var(--text); }
+.fd-tag.sel-app  { background: var(--primary-bg); color: var(--primary); border-color: #bfdbfe; }
+.fd-tag.sel-api  { background: var(--success-bg); color: var(--success); border-color: #6ee7b7; }
+.fd-tag.sel-exec { background: var(--skip-bg);    color: var(--skip);    border-color: #c4b5fd; }
+.fd-tag.sel-date { background: var(--warn-bg,#fef3c7); color: var(--warn); border-color: #fcd34d; }
+.fd-empty { font-size: 10px; color: var(--text-3); font-style: italic; }
+.fd-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 10px 0; border-top: 1px solid var(--border); margin-top: 4px;
+}
+.fd-clear { font-size: 10px; color: var(--text-3); cursor: pointer; border: none; background: none; font-family: inherit; }
+.fd-clear:hover { color: var(--error); }
+.fd-apply {
+  padding: 3px 12px; background: var(--primary); color: #fff; border: none;
+  border-radius: var(--radius-sm); font-size: 11px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.fd-apply:hover { background: var(--primary-h); }
+/* Active filters strip */
+.active-filters {
+  display: none; gap: 4px; padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap; align-items: center;
+  background: var(--bg-alt);
+}
+.active-filters.visible { display: flex; }
+.af-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-3); }
+.af-chip {
+  display: flex; align-items: center; gap: 3px;
+  padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 600; cursor: pointer;
+}
+.af-chip.app  { background: var(--primary-bg); color: var(--primary); }
+.af-chip.api  { background: var(--success-bg); color: var(--success); }
+.af-chip.exec { background: var(--skip-bg);    color: var(--skip); }
+.af-chip.date { background: var(--warn-bg,#fef3c7); color: var(--warn); }
+.af-chip:hover { opacity: .75; }
+
+.tree { flex: 1; overflow-y: auto; padding: 6px 0; }
+.tree::-webkit-scrollbar { width: 4px; }
+.tree::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+
+.tree-empty { padding: 20px; text-align: center; font-size: 12px; color: var(--text-3); line-height: 1.6; }
+
+/* ── Hover info panel ── */
+.hover-info {
+  flex-shrink: 0; border-top: 1px solid var(--border);
+  padding: 8px 10px; min-height: 44px;
+  opacity: 0; transition: opacity 150ms; pointer-events: none;
+}
+.hover-info.visible { opacity: 1; }
+.hi-status {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; color: var(--text-2); margin-bottom: 3px;
+}
+.hi-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; }
+.hi-dot.passed  { background: var(--success); }
+.hi-dot.failed  { background: var(--error); }
+.hi-dot.skipped { background: var(--skip); }
+.hi-counts { display: flex; gap: 8px; font-size: 11px; }
+.hi-c-pass { color: var(--success); font-weight: 600; }
+.hi-c-fail { color: var(--error);   font-weight: 600; }
+.hi-c-skip { color: var(--skip);    font-weight: 600; }
+
+.folder-row {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 10px 4px 8px; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--text-2);
+  user-select: none; border-radius: 4px; margin: 0 4px;
+  transition: background .1s;
+}
+.folder-row:hover { background: rgba(0,0,0,.04); color: var(--text); }
+.folder-chevron { transition: transform .15s; flex-shrink: 0; color: var(--text-3); }
+.folder-chevron.open { transform: rotate(90deg); }
+.folder-icon { flex-shrink: 0; color: var(--warn); }
+.folder-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-children { padding-left: 12px; }
+.folder-children.collapsed { display: none; }
+
+.file-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px 5px 10px; cursor: pointer;
+  border-radius: var(--radius-sm); margin: 1px 6px;
+  transition: background .1s; border: 1.5px solid transparent;
+}
+.file-row:hover { background: rgba(0,0,0,.04); }
+.file-row.active { background: var(--primary-bg); border-color: #bfdbfe; }
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  background: var(--text-3);
+}
+.status-dot.passed  { background: var(--success); }
+.status-dot.failed  { background: var(--error); }
+.status-dot.skipped { background: var(--skip); }
+.file-icon { flex-shrink: 0; color: var(--text-3); }
+.file-row.active .file-icon { color: var(--primary); }
+.file-name {
+  flex: 1; font-size: 11px; color: var(--text-2); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.file-row.active .file-name { color: var(--primary); font-weight: 600; }
+.file-cached { flex-shrink: 0; }
+
+/* ── Main panel ── */
+.main { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+
+.breadcrumb-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 16px; height: 40px;
+  border-bottom: 1px solid var(--border); background: var(--bg);
+  flex-shrink: 0;
+}
+.breadcrumb { font-size: 11px; color: var(--text-3); flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: 'JetBrains Mono', ui-monospace, Consolas, 'Courier New', monospace; }
+.breadcrumb b { color: var(--text-2); font-weight: 600; }
+.open-tab-btn {
+  display: flex; align-items: center; gap: 4px;
+  padding: 0 10px; height: 26px; border-radius: var(--radius-sm);
+  background: var(--bg-alt); border: 1px solid var(--border);
+  font-size: 11px; font-weight: 600; color: var(--text-2); cursor: pointer;
+  transition: background .12s; white-space: nowrap; font-family: inherit; flex-shrink: 0;
+}
+.open-tab-btn:hover { background: var(--bg); color: var(--primary); border-color: var(--primary); }
+
+.meta-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 0 16px; height: 38px;
+  border-bottom: 1px solid var(--border); background: var(--bg-alt);
+  flex-shrink: 0;
+}
+.meta-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+.meta-label { color: var(--text-3); font-size: 10px; text-transform: uppercase; letter-spacing: .4px; font-weight: 600; }
+.meta-val { color: var(--text-2); font-weight: 500; }
+.meta-tag { padding: 1px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; background: var(--primary-bg); color: var(--primary); border: 1px solid #bfdbfe; }
+.meta-sep { width: 1px; height: 14px; background: var(--border); }
+.meta-jira-link { font-size: 11px; font-weight: 500; color: var(--primary); text-decoration: none; }
+.meta-jira-link:hover { text-decoration: underline; }
+
+.report-iframe { flex: 1; border: none; background: var(--bg); }
+
+.empty-state {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; color: var(--text-3); text-align: center; padding: 40px;
+}
+.empty-state svg { opacity: .4; }
+.empty-title { font-size: 15px; font-weight: 600; color: var(--text-2); }
+.empty-sub { font-size: 12px; line-height: 1.6; max-width: 280px; }
+
+.loading-state {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; color: var(--text-3);
+}
+.spinner {
+  width: 28px; height: 28px; border: 2px solid var(--border);
+  border-top-color: var(--primary); border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+/* ── Settings overlay ── */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.35); z-index: 100;
+  align-items: center; justify-content: center;
+}
+.overlay.open { display: flex; }
+.settings-card {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  width: 400px; max-width: 96vw; padding: 24px;
+}
+.settings-title {
+  font-size: 15px; font-weight: 700; margin-bottom: 20px;
+  display: flex; align-items: center; gap: 8px;
+}
+.settings-close {
+  margin-left: auto; cursor: pointer; color: var(--text-3);
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 4px;
+  transition: background .12s, color .12s;
+}
+.settings-close:hover { background: var(--bg-alt); color: var(--text); }
+.field-group { margin-bottom: 14px; }
+.field-label { font-size: 11px; font-weight: 700; color: var(--text-2); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .4px; }
+.field-input {
+  width: 100%; padding: 7px 10px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-alt); color: var(--text);
+  transition: border-color .15s; outline: none;
+}
+.field-input:focus { border-color: var(--border-focus); background: var(--bg); }
+.field-input.mono { font-family: 'JetBrains Mono', ui-monospace, Consolas, 'Courier New', monospace; font-size: 12px; }
+.field-row { display: flex; gap: 8px; }
+.field-row .field-input { flex: 1; }
+.folder-display {
+  display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-alt); font-size: 11px; font-family: 'JetBrains Mono', ui-monospace, Consolas, 'Courier New', monospace;
+  color: var(--text-3); min-height: 34px; flex-wrap: wrap;
+}
+.folder-display.has-path { color: var(--success); }
+.pick-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 0 10px; height: 28px; border-radius: var(--radius-sm);
+  background: var(--bg); border: 1px solid var(--border);
+  font-size: 11px; font-weight: 600; color: var(--text-2); cursor: pointer;
+  transition: background .12s; font-family: inherit; flex-shrink: 0;
+}
+.pick-btn:hover { background: var(--bg-alt); color: var(--primary); border-color: var(--primary); }
+.settings-footer { display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 0 16px; height: 34px; border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  border: 1.5px solid transparent; transition: background .15s, border-color .15s;
+}
+.btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-h); border-color: var(--primary-h); }
+.btn-ghost { background: var(--bg); color: var(--text-2); border-color: var(--border); }
+.btn-ghost:hover { background: var(--bg-alt); }
+.btn-github-signin {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 34px; padding: 0 14px; border-radius: 6px;
+  background: var(--primary); border: 1px solid var(--primary);
+  color: #fff; font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background .15s, border-color .15s;
+}
+.btn-github-signin:hover { background: var(--primary-h); border-color: var(--primary-h); }
+.btn-github-signin:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+.btn-github-signin svg { width: 16px; height: 16px; flex-shrink: 0; }
+.hidden { display: none !important; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 20px; right: 20px; z-index: 200;
+  padding: 10px 16px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500; color: #fff;
+  background: var(--text); opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .2s, transform .2s;
+  pointer-events: none; max-width: 340px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--success); }
+.toast.error   { background: var(--error); }
+.toast.warn    { background: var(--warn); }
+
+/* ── Sync overlay ── */
+.sync-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.45); z-index: 150;
+  align-items: center; justify-content: center;
+}
+.sync-overlay.open { display: flex; }
+.sync-overlay-card {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px 32px;
+  min-width: 300px; text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,.2);
+}
+.sync-overlay-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 14px; }
+.sync-overlay-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 10px; }
+.sync-overlay-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width .2s; width: 0%; }
+.sync-overlay-label { font-size: 12px; color: var(--text-3); margin-bottom: 16px; }
+.sync-cancel-btn {
+  padding: 6px 18px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border); background: var(--bg-alt); color: var(--text-2);
+  cursor: pointer; font-family: inherit; transition: background .12s;
+}
+.sync-cancel-btn:hover { background: var(--bg); color: var(--error); border-color: var(--error); }
+
+/* progress bar — two colors */
+.progress-fill { height: 100%; border-radius: 2px; transition: width .2s; width: 0%; background: var(--success); }
+.progress-fill.syncing { background: var(--primary); }
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+  <span class="logo">Report<span>Viewer</span></span>
+  <div class="repo-pill" id="repoPill" onclick="openSettings()" title="Click to configure">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
+    <span class="repo-pill-text" id="repoPillText">Not configured — click to set up</span>
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+
+  <div class="sync-progress" id="syncProgress">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <span id="progressText">Syncing…</span>
+  </div>
+
+  <div class="spacer"></div>
+
+  <button class="topbar-btn" id="syncBtn" onclick="startSync()" title="Sync — download new/changed files">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="syncIcon"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+    Sync
+  </button>
+
+  <button class="topbar-btn icon-only" id="viewModeBtn" onclick="toggleViewMode()" title="Toggle split / full view">
+    <svg id="viewModeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+  </button>
+
+  <button class="topbar-btn icon-only" onclick="toggleTheme()" title="Toggle theme">
+    <svg id="themeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+  </button>
+
+  <button class="topbar-btn icon-only" onclick="openSettings()" title="Settings">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+  </button>
+</div>
+
+<!-- Body -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-search">
+      <div class="search-wrap">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" id="searchInput" type="text" placeholder="Search by name or tag…" oninput="onSearch()">
+      </div>
+    </div>
+    <div class="filter-bar" id="filterBar">
+      <button class="filter-btn" id="filterBtn" onclick="toggleFilterDropdown()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filters
+        <span class="filter-count" id="filterCount" style="display:none">0</span>
+      </button>
+      <div class="filter-dropdown" id="filterDropdown">
+        <div class="fd-search-wrap">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="fd-search-input" id="fdSearch" type="text" placeholder="Search apps and APIs…" oninput="renderFilterDropdown()">
+        </div>
+        <div class="fd-section">
+          <div class="fd-section-title">Apps</div>
+          <div class="fd-tags" id="fdApps"></div>
+        </div>
+        <div class="fd-section">
+          <div class="fd-section-title">APIs</div>
+          <div class="fd-tags" id="fdApis"></div>
+        </div>
+        <div class="fd-section" id="fdExecSection" style="display:none">
+          <div class="fd-section-title">Executors</div>
+          <div class="fd-tags" id="fdExecutors"></div>
+        </div>
+        <div class="fd-section" id="fdDateSection" style="display:none">
+          <div class="fd-section-title">Date</div>
+          <div class="fd-tags" id="fdDates"></div>
+        </div>
+        <div class="fd-footer">
+          <button class="fd-clear" onclick="clearFilters()">Clear all</button>
+          <button class="fd-apply" onclick="applyFilters()">Apply</button>
+        </div>
+      </div>
+    </div>
+    <div class="active-filters" id="activeFilters"></div>
+    <div class="tree" id="treeContainer">
+      <div class="tree-empty" id="treeEmpty">
+        Configure GitHub repository<br>in Settings to load reports.
+      </div>
+    </div>
+    <div class="hover-info" id="hoverInfo"></div>
+  </div>
+
+  <div class="sidebar-resizer" id="sidebarResizer"></div>
+
+  <!-- Main -->
+  <div class="main" id="mainPanel">
+
+    <!-- Breadcrumb (hidden until file selected) -->
+    <div class="breadcrumb-bar" id="breadcrumbBar" style="display:none">
+      <span class="breadcrumb" id="breadcrumbText"></span>
+      <button class="open-tab-btn" onclick="openInTab()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Open in tab
+      </button>
+    </div>
+
+    <!-- Meta bar (hidden until file selected) -->
+    <div class="meta-bar" id="metaBar" style="display:none" ></div>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>
+      <div class="empty-title">No report selected</div>
+      <div class="empty-sub">Select a report from the tree on the left to view it here.</div>
+    </div>
+
+    <!-- Loading state -->
+    <div class="loading-state" id="loadingState" style="display:none">
+      <div class="spinner"></div>
+      <span style="font-size:12px;color:var(--text-3)" id="loadingText">Loading…</span>
+    </div>
+
+    <!-- iframe -->
+    <iframe class="report-iframe" id="reportFrame" style="display:none" sandbox="allow-scripts allow-modals"></iframe>
+  </div>
+</div>
+
+<!-- Settings overlay -->
+<div class="overlay" id="settingsOverlay" onclick="overlayClick(event)">
+  <div class="settings-card">
+    <div class="settings-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+      <span class="settings-close" onclick="closeSettings()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </span>
+    </div>
+
+    <div class="field-group">
+      <div class="field-label">Repository (owner/repo)</div>
+      <input class="field-input mono" id="sRepo" type="text" placeholder="acme-org/test-reports" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Branch</div>
+      <input class="field-input mono" id="sBranch" type="text" placeholder="main" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Cloudflare Worker URL</div>
+      <div id="proxy-url-row" style="display:flex;gap:8px;align-items:center">
+        <input id="proxy-url-input" class="field-input mono" type="url" placeholder="https://xxx.workers.dev" autocomplete="off" spellcheck="false" style="flex:1">
+        <button class="btn btn-ghost" id="btn-proxy-save" style="flex-shrink:0;white-space:nowrap">Save</button>
+      </div>
+      <div id="proxy-hint" style="font-size:11px;color:var(--text-3);margin-top:4px">Worker URL required to sign in</div>
+      <div id="proxy-set-row" class="hidden" style="font-size:12px;color:var(--text-3);display:flex;align-items:center;gap:8px;margin-top:4px">
+        Worker: <span id="proxy-set-host" style="font-family:monospace;font-size:11px;color:var(--text-2)"></span>
+        <button class="btn btn-ghost" id="btn-proxy-change" style="font-size:11px;padding:2px 8px">change</button>
+      </div>
+    </div>
+
+    <div class="field-group" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <button class="btn-github-signin" id="btn-signin" style="flex:1;min-width:120px" disabled><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>Sign in with GitHub</button>
+      <div id="auth-signed-in" class="hidden" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);flex-wrap:wrap">
+        Signed in as <strong id="gh-username" style="color:var(--text)"></strong>
+        <button class="btn btn-ghost" id="btn-signout" style="font-size:11px;padding:3px 10px">Sign out</button>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-label">Local cache folder</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="folder-display" id="folderDisplay" style="flex:1">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+          <span id="folderPath">No folder selected</span>
+        </div>
+        <button class="pick-btn" onclick="pickFolder()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+          Choose…
+        </button>
+      </div>
+      <div style="margin-top:5px;font-size:11px;color:var(--text-3)">Used as local cache for synced reports. Chrome/Edge 86+ required.</div>
+    </div>
+
+    <div id="testResult" style="display:none;margin-top:10px;padding:8px 12px;border-radius:var(--radius-sm);font-size:11px;font-family:'JetBrains Mono',monospace;word-break:break-all;line-height:1.5"></div>
+
+    <div class="settings-footer">
+      <button class="btn btn-ghost" id="testBtn" onclick="testConnection()">Test connection</button>
+      <button class="btn btn-ghost" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save &amp; connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- Device Flow modal -->
+<div id="deviceModal" class="overlay" style="z-index:300">
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;width:340px;text-align:center;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.25)">
+    <div style="font-size:15px;font-weight:700;color:var(--text)">Authorize Report Viewer</div>
+    <p style="font-size:12px;color:var(--text-3);line-height:1.6;margin:0">Copy the code below, then open GitHub to authorize.</p>
+    <div id="device-code-display" style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:24px;font-weight:700;color:var(--primary);letter-spacing:.12em;background:var(--primary-bg);border:1px solid #bfdbfe;border-radius:var(--radius-sm);padding:14px;cursor:pointer;user-select:all" title="Click to copy">XXXX-XXXX</div>
+    <div style="font-size:11px;color:var(--text-3)">Click code to copy &middot; expires in 15 min</div>
+    <button id="btn-open-device" style="height:38px;border-radius:var(--radius-sm);background:var(--primary);border:none;color:#fff;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit">Open github.com/login/device &rarr;</button>
+    <div id="device-waiting" style="font-size:12px;color:var(--text-3);display:flex;align-items:center;justify-content:center;gap:8px">
+      <span style="display:inline-block;animation:spin .8s linear infinite">&#8635;</span> Waiting for authorization&hellip;
+    </div>
+    <div id="device-err" style="font-size:12px;color:var(--error);min-height:16px"></div>
+    <button id="btn-device-cancel" class="btn btn-ghost" style="font-size:12px">Cancel</button>
+  </div>
+</div>
+
+<!-- Sync overlay (shown during manual Sync) -->
+<div class="sync-overlay" id="syncOverlay">
+  <div class="sync-overlay-card">
+    <div class="sync-overlay-title" id="syncOverlayTitle">Syncing repository…</div>
+    <div class="sync-overlay-bar"><div class="sync-overlay-fill" id="syncOverlayFill"></div></div>
+    <div class="sync-overlay-label" id="syncOverlayLabel">Preparing…</div>
+    <button class="sync-cancel-btn" onclick="cancelSync()">Cancel</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let tree       = [];          // [{name, path, sha, type, children}]
+let tagsCache  = {};          // { path → {apps:[], apis:[]} } from rvw-tags localStorage
+let sessionId   = '';
+let OAUTH_PROXY = localStorage.getItem('ghv-proxy-url') || '';
+let allApps    = [];          // sorted unique app tags across all files
+let allApis    = [];          // sorted unique api tags across all files
+let allExecutors = [];        // sorted unique executor tags
+let allDates   = [];          // sorted unique dates (YYYY-MM-DD, newest first)
+let pendingApps = [];         // selected in dropdown (not yet applied)
+let pendingApis = [];
+let pendingExecutors = [];
+let pendingDates = [];
+let activeApps = [];          // applied filters
+let activeApis = [];
+let activeExecutors = [];
+let activeDates = [];
+let filterOpen = false;
+let hoverTimer = null;
+let searchQ    = '';
+let activeFile = null;        // currently selected file node
+let dirHandle  = null;        // FileSystemDirectoryHandle
+let shaMap     = {};          // path → sha (localStorage cache)
+let currentBlobUrl = null;
+let currentReportHtml = null;
+let fullMode   = false;
+
+// ═══════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function ls(k, v) {
+  if (v === undefined) { try { return localStorage.getItem(k); } catch { return null; } }
+  try { localStorage.setItem(k, v); } catch {}
+}
+
+function lsObj(k, v) {
+  if (v === undefined) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } }
+  try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {
+    console.warn('[ReportViewer] localStorage write failed for', k, '—', e.message);
+    if (e.name === 'QuotaExceededError') showToast('Storage quota exceeded — cache not saved', 'error');
+  }
+}
+
+function cfg(k) { return ls('rvw-' + k) || ''; }
+function cfgSet(k, v) { ls('rvw-' + k, v); }
+
+// ═══════════════════════════════════════════════════════════
+//  AUTH  (Cloudflare Worker Device Flow)
+// ═══════════════════════════════════════════════════════════
+
+async function startDeviceFlow() {
+  document.getElementById('device-err').textContent = '';
+  document.getElementById('device-waiting').style.display = 'flex';
+  try {
+    if (!OAUTH_PROXY) throw new Error('OAUTH_PROXY not set — deploy cloudflare-worker.js');
+    const res = await fetch(OAUTH_PROXY + '/auth/start', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    if (!res.ok) throw new Error('Worker error ' + res.status);
+    const { session_id, user_code, verification_uri, interval } = await res.json();
+    showDeviceModal(user_code, verification_uri);
+    pollWorkerForAuth(session_id, interval);
+  } catch (e) {
+    document.getElementById('deviceModal').classList.add('open');
+    setDeviceError('Failed to start: ' + (e.message || e));
+  }
+}
+
+function pollWorkerForAuth(sid, interval) {
+  let _pollAbort = new AbortController();
+  const signal = _pollAbort.signal;
+  let delay = interval * 1000;
+
+  async function tick() {
+    if (signal.aborted) return;
+    try {
+      const res  = await fetch(`${OAUTH_PROXY}/auth/poll?sid=${encodeURIComponent(sid)}`);
+      if (!res.ok) { setDeviceError('Worker error ' + res.status); return; }
+      const data = await res.json();
+      if (signal.aborted) return;
+
+      if (data.status === 'ok') {
+        sessionId = sid;
+        localStorage.setItem('ghv-sid', sid);
+        localStorage.setItem('ghv-user', data.login || '');
+        hideDeviceModal();
+        setAuthUser(data.login || '');
+        renderProxyConfig();
+        loadTree();
+        return;
+      }
+      if (data.status === 'pending') {
+        delay = (data.interval || interval) * 1000;
+      } else {
+        setDeviceError(data.reason || data.status || 'Auth failed');
+        return;
+      }
+    } catch (fetchErr) {
+      setDeviceError('Network error: ' + fetchErr.message);
+      return;
+    }
+    if (!signal.aborted) setTimeout(tick, delay);
+  }
+
+  setTimeout(tick, delay);
+}
+
+function setAuthUser(login) {
+  const signinBtn   = document.getElementById('btn-signin');
+  const signedInDiv = document.getElementById('auth-signed-in');
+  const usernameEl  = document.getElementById('gh-username');
+  if (signinBtn)   signinBtn.classList.add('hidden');
+  if (signedInDiv) signedInDiv.classList.remove('hidden');
+  if (usernameEl)  usernameEl.textContent = '@' + login;
+}
+
+function clearAuth() {
+  const sid = sessionId;
+  sessionId = '';
+  localStorage.removeItem('ghv-sid');
+  localStorage.removeItem('ghv-user');
+  const signinBtn   = document.getElementById('btn-signin');
+  const signedInDiv = document.getElementById('auth-signed-in');
+  if (signinBtn)   signinBtn.classList.remove('hidden');
+  if (signedInDiv) signedInDiv.classList.add('hidden');
+  const usernameEl = document.getElementById('gh-username');
+  if (usernameEl)  usernameEl.textContent = '';
+  if (sid && OAUTH_PROXY) {
+    fetch(OAUTH_PROXY + '/auth/signout', {
+      method: 'POST',
+      headers: { 'X-Session-ID': sid },
+    }).catch(() => {});
+  }
+}
+
+function renderProxyConfig() {
+  const hasProxy  = !!OAUTH_PROXY;
+  const urlRow    = document.getElementById('proxy-url-row');
+  const hintEl    = document.getElementById('proxy-hint');
+  const setRow    = document.getElementById('proxy-set-row');
+  const signinBtn = document.getElementById('btn-signin');
+  if (hasProxy) {
+    if (urlRow)    urlRow.classList.add('hidden');
+    if (hintEl)    hintEl.classList.add('hidden');
+    if (setRow)    setRow.classList.remove('hidden');
+    if (signinBtn) signinBtn.disabled = false;
+    try { document.getElementById('proxy-set-host').textContent = new URL(OAUTH_PROXY).hostname; }
+    catch { document.getElementById('proxy-set-host').textContent = OAUTH_PROXY; }
+  } else {
+    if (urlRow)    urlRow.classList.remove('hidden');
+    if (hintEl)    hintEl.classList.remove('hidden');
+    if (setRow)    setRow.classList.add('hidden');
+    if (signinBtn) signinBtn.disabled = true;
+  }
+}
+
+function saveProxyUrl() {
+  const input = document.getElementById('proxy-url-input');
+  const val   = input.value.trim().replace(/\/+$/, '');
+  if (!val.startsWith('http://') && !val.startsWith('https://')) {
+    input.classList.add('input-err');
+    return;
+  }
+  input.classList.remove('input-err');
+  OAUTH_PROXY = val;
+  localStorage.setItem('ghv-proxy-url', val);
+  renderProxyConfig();
+}
+
+function showDeviceModal(userCode, verifyUrl) {
+  document.getElementById('device-code-display').textContent = userCode;
+  document.getElementById('device-err').textContent = '';
+  document.getElementById('device-waiting').style.display = 'flex';
+  document.getElementById('btn-open-device').onclick = () => window.open(verifyUrl, '_blank', 'noopener');
+  document.getElementById('deviceModal').classList.add('open');
+}
+
+function hideDeviceModal() {
+  document.getElementById('deviceModal').classList.remove('open');
+}
+
+function setDeviceError(msg) {
+  document.getElementById('device-err').textContent = msg;
+  document.getElementById('device-waiting').style.display = 'none';
+}
+
+let toastTimer;
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type !== 'info' ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  THEME
+// ═══════════════════════════════════════════════════════════
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  const icon = document.getElementById('themeIcon');
+  if (t === 'dark') {
+    icon.innerHTML = '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" fill="none" stroke="currentColor" stroke-width="2"/>';
+  } else {
+    icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+  }
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  applyTheme(next); cfgSet('theme', next);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  VIEW MODE
+// ═══════════════════════════════════════════════════════════
+function toggleViewMode() {
+  fullMode = !fullMode;
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('hidden', fullMode);
+  if (fullMode) {
+    sb.style.width = '';
+  } else {
+    const saved = parseInt(localStorage.getItem('rvw-sidebar-width'));
+    if (saved) sb.style.width = saved + 'px';
+  }
+  const icon = document.getElementById('viewModeIcon');
+  if (fullMode) {
+    icon.innerHTML = '<path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/>';
+  } else {
+    icon.innerHTML = '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SIDEBAR RESIZE
+// ═══════════════════════════════════════════════════════════
+(function initSidebarResize() {
+  const resizer = document.getElementById('sidebarResizer');
+  const sidebar = document.getElementById('sidebar');
+  const MIN_W = 160, MAX_W = 520, LS_KEY = 'rvw-sidebar-width';
+
+  const saved = parseInt(localStorage.getItem(LS_KEY));
+  if (saved && !sidebar.classList.contains('hidden')) sidebar.style.width = saved + 'px';
+
+  // Store active handlers so we can clean up stale listeners if mouseup was missed
+  // (mouseup over an iframe is swallowed and never reaches the parent document)
+  let activeMove = null, activeUp = null;
+
+  function cleanupDrag() {
+    if (activeMove) { document.removeEventListener('mousemove', activeMove); activeMove = null; }
+    if (activeUp)   { document.removeEventListener('mouseup',   activeUp);   activeUp   = null; }
+    sidebar.classList.remove('resizing');
+    resizer.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+    // Restore pointer-events on all iframes (suppressed during drag to prevent event capture)
+    document.querySelectorAll('iframe').forEach(function(f) { f.style.pointerEvents = ''; });
+  }
+
+  resizer.addEventListener('mousedown', function(e) {
+    if (sidebar.classList.contains('hidden')) return;
+    e.preventDefault();
+
+    // Clean up any stale handlers left from a drag where mouseup fired inside an iframe
+    cleanupDrag();
+
+    // Prefer parseInt(style.width) over getBoundingClientRect() — the latter returns
+    // the pre-transition layout value when a CSS transition is in progress (wrong startW)
+    const startX = e.clientX;
+    const startW = parseInt(sidebar.style.width) || sidebar.getBoundingClientRect().width;
+
+    sidebar.classList.add('resizing');
+    resizer.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    // Prevent iframes from swallowing mousemove/mouseup during drag
+    document.querySelectorAll('iframe').forEach(function(f) { f.style.pointerEvents = 'none'; });
+
+    activeMove = function(e) {
+      const w = Math.min(MAX_W, Math.max(MIN_W, startW + e.clientX - startX));
+      sidebar.style.width = w + 'px';
+    };
+    activeUp = function() {
+      localStorage.setItem(LS_KEY, parseInt(sidebar.style.width));
+      cleanupDrag();
+    };
+    document.addEventListener('mousemove', activeMove);
+    document.addEventListener('mouseup',   activeUp);
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════════
+
+function openSettings() {
+  document.getElementById('sRepo').value   = cfg('repo');
+  document.getElementById('sBranch').value = cfg('branch') || 'main';
+  const pui = document.getElementById('proxy-url-input');
+  if (pui) pui.value = OAUTH_PROXY;
+  renderProxyConfig();
+  updateFolderDisplay();
+  document.getElementById('settingsOverlay').classList.add('open');
+}
+function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
+function overlayClick(e) { if (e.target === e.currentTarget) closeSettings(); }
+
+function saveSettings() {
+  const repo   = document.getElementById('sRepo').value.trim();
+  const branch = document.getElementById('sBranch').value.trim() || 'main';
+
+  cfgSet('repo', repo);
+  cfgSet('branch', branch);
+
+  updateRepoPill();
+  closeSettings();
+  loadTree();
+}
+
+function updateRepoPill() {
+  const repo = cfg('repo');
+  document.getElementById('repoPillText').textContent = repo || 'Not configured — click to set up';
+}
+
+function updateFolderDisplay() {
+  const el = document.getElementById('folderDisplay');
+  const sp = document.getElementById('folderPath');
+  if (dirHandle) {
+    sp.textContent = dirHandle.name;
+    el.classList.add('has-path');
+  } else {
+    sp.textContent = 'No folder selected';
+    el.classList.remove('has-path');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FILE SYSTEM ACCESS API
+// ═══════════════════════════════════════════════════════════
+// IndexedDB helpers for persisting FileSystemDirectoryHandle
+function idbOpen() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('rvw-db', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('handles');
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+async function idbSet(key, val) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('handles', 'readwrite');
+    tx.objectStore('handles').put(val, key);
+    tx.oncomplete = res; tx.onerror = e => rej(e.target.error);
+  });
+}
+async function idbGet(key) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('handles', 'readonly');
+    const req = tx.objectStore('handles').get(key);
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+async function pickFolder() {
+  if (!window.showDirectoryPicker) {
+    showToast('File System Access API not supported in this browser. Use Chrome or Edge 86+.', 'error');
+    return;
+  }
+  try {
+    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await idbSet('dir', dirHandle);
+    updateFolderDisplay();
+    showToast('Folder selected: ' + dirHandle.name, 'success');
+    loadTree();
+  } catch (e) {
+    if (e.name !== 'AbortError') showToast('Could not access folder: ' + e.message, 'error');
+  }
+}
+
+async function restoreFolder() {
+  try {
+    const saved = await idbGet('dir');
+    if (!saved) return;
+    // Check permission — may need user gesture to re-grant
+    const perm = await saved.queryPermission({ mode: 'readwrite' });
+    if (perm === 'granted') {
+      dirHandle = saved;
+    } else {
+      // Store it anyway; ensurePermission() will request on first use
+      dirHandle = saved;
+    }
+    updateFolderDisplay();
+  } catch (e) {
+    console.warn('restoreFolder failed:', e.message);
+  }
+}
+
+async function ensurePermission() {
+  if (!dirHandle) return false;
+  try {
+    // First try queryPermission (no dialog) — works if already granted
+    const state = await dirHandle.queryPermission({ mode: 'readwrite' });
+    if (state === 'granted') return true;
+    // If 'prompt', only request if there's been a user gesture
+    const perm = await dirHandle.requestPermission({ mode: 'readwrite' });
+    return perm === 'granted';
+  } catch { return false; }
+}
+
+// Silent permission check — no dialog, used during auto-scan at startup
+async function checkPermissionSilent() {
+  if (!dirHandle) return false;
+  try {
+    const state = await dirHandle.queryPermission({ mode: 'readwrite' });
+    return state === 'granted';
+  } catch { return false; }
+}
+
+async function writeFile(relPath, text) {
+  if (!dirHandle) return false;
+  if (!await ensurePermission()) return false;
+  try {
+    const parts = relPath.split('/');
+    let cur = dirHandle;
+    for (let i = 0; i < parts.length - 1; i++) {
+      cur = await cur.getDirectoryHandle(parts[i], { create: true });
+    }
+    const fh = await cur.getFileHandle(parts[parts.length - 1], { create: true });
+    const w = await fh.createWritable();
+    await w.write(text);
+    await w.close();
+    return true;
+  } catch (e) {
+    console.warn('writeFile error', relPath, e);
+    return false;
+  }
+}
+
+async function readLocalFile(relPath) {
+  if (!dirHandle) return null;
+  if (!await ensurePermission()) return null;
+  try {
+    const parts = relPath.split('/');
+    let cur = dirHandle;
+    for (let i = 0; i < parts.length - 1; i++) {
+      cur = await cur.getDirectoryHandle(parts[i]);
+    }
+    const fh = await cur.getFileHandle(parts[parts.length - 1]);
+    const file = await fh.getFile();
+    return await file.text();
+  } catch { return null; }
+}
+
+async function localFileExists(relPath) {
+  if (!dirHandle) return false;
+  try {
+    const parts = relPath.split('/');
+    let cur = dirHandle;
+    for (let i = 0; i < parts.length - 1; i++) {
+      cur = await cur.getDirectoryHandle(parts[i]);
+    }
+    await cur.getFileHandle(parts[parts.length - 1]);
+    return true;
+  } catch { return false; }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GITHUB API
+// ═══════════════════════════════════════════════════════════
+async function ghFetch(url) {
+  let fetchUrl = url;
+  const headers = { 'Accept': 'application/vnd.github+json' };
+
+  if (sessionId && OAUTH_PROXY) {
+    const m = url.match(/api\.github\.com(\/.*)/);
+    if (m) fetchUrl = OAUTH_PROXY + '/api/github' + m[1];
+    headers['X-Session-ID'] = sessionId;
+  }
+
+  let r;
+  try { r = await fetch(fetchUrl, { headers, cache: 'no-store' }); }
+  catch (e) { throw new Error('Network error: ' + e.message); }
+
+  if (r.status === 401) {
+    if (sessionId) { clearAuth(); showToast('Session expired. Please sign in again.', 'error'); }
+    throw new Error('Unauthorized (401)');
+  }
+  if (r.status === 403) {
+    const j = await r.json().catch(() => ({}));
+    showToast('Access denied (403) — ' + (j.message || 'check permissions or rate limit'), 'warn');
+    throw new Error('Forbidden (403)');
+  }
+  if (r.status === 404) {
+    const j = await r.json().catch(() => ({}));
+    const msg = sessionId
+      ? 'Repo not found or token lacks Contents:Read permission.'
+      : 'Not found (404): ' + (j.message || '');
+    showToast(msg, 'error');
+    throw new Error('Not found (404)');
+  }
+  if (!r.ok) throw new Error('GitHub API error ' + r.status);
+  return r.json();
+}
+
+async function downloadFile(path) {
+  const repo   = cfg('repo');
+  const branch = cfg('branch') || 'main';
+  // encode each path segment individually — preserve slashes
+  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+  const data = await ghFetch(`https://api.github.com/repos/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`);
+  if (data.encoding === 'base64' && data.content) {
+    const bin = atob(data.content.replace(/\s/g, ''));
+    return new TextDecoder('utf-8').decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+  }
+  // File > 1 MB: GitHub returns encoding:'none', content:''. Fall back to download_url.
+  if (!data.download_url) throw new Error('File too large and no download_url from GitHub');
+  let rawUrl = data.download_url;
+  const rawHdr = {};
+  if (sessionId && OAUTH_PROXY) {
+    rawUrl = OAUTH_PROXY + '/api/github/raw?url=' + encodeURIComponent(data.download_url);
+    rawHdr['X-Session-ID'] = sessionId;
+  }
+  const r = await fetch(rawUrl, { headers: rawHdr, cache: 'no-store' });
+  if (!r.ok) throw new Error(String(r.status));
+  return await r.text();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  API PATH NORMALIZATION
+// ═══════════════════════════════════════════════════════════
+function isApiIdSegment(seg) {
+  if (!seg) return false;
+  if (/^\d+$/.test(seg)) return true;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(seg)) return true;
+  const stripped = seg.replace(/-/g, '');
+  if (/^[a-zA-Z0-9]+$/.test(stripped) && (stripped.match(/\d/g) || []).length > 1) return true;
+  return false;
+}
+
+function normalizeApiPath(apiPath) {
+  return (apiPath || '').split('?')[0].split('/').map(seg =>
+    seg === '' ? '' : isApiIdSegment(seg) ? '{id}' : seg.toLowerCase()
+  ).join('/');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TAGS — parse from report HTML content
+// ═══════════════════════════════════════════════════════════
+function parseReportTags(html) {
+  let get = () => '';
+  try {
+    // Parse only the head region (meta tags live in <head>, well within 32KB).
+    // DOMParser tolerates a truncated tail and does NOT execute scripts.
+    const doc = new DOMParser().parseFromString(html.slice(0, 32768), 'text/html');
+    get = name => {
+      const el = doc.querySelector(`meta[name="${name}"]`);
+      return el ? (el.getAttribute('content') || '') : '';
+    };
+  } catch (e) {
+    // Fall back to empty values, but keep the same-shaped object below.
+  }
+  return {
+    apps:     get('trb-tags').split(',').map(s => s.trim()).filter(Boolean),
+    apis:     [...new Set(get('trb-apis').split(',').map(s => normalizeApiPath(s.trim())).filter(Boolean))],
+    executor: get('trb-executor'),
+    status:   get('trb-status') || null,
+    date:     get('trb-date') || '',
+    counts: {
+      passed:  parseInt(get('trb-count-passed'))  || 0,
+      failed:  parseInt(get('trb-count-failed'))  || 0,
+      skipped: parseInt(get('trb-count-skipped')) || 0,
+    },
+    jiras:    get('trb-jira').split(',').map(s => s.trim()).filter(Boolean),
+    hasMeta: true,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TREE BUILDING
+// ═══════════════════════════════════════════════════════════
+function buildTree(blobs) {
+  // dirs map: full path → node
+  const dirs = {};
+  const root = [];
+
+  function ensureDir(fullPath) {
+    if (dirs[fullPath]) return dirs[fullPath];
+    const parts = fullPath.split('/');
+    const name  = parts[parts.length - 1];
+    const node  = { name, path: fullPath, type: 'dir', children: [], open: true };
+    dirs[fullPath] = node;
+    if (parts.length === 1) {
+      root.push(node);
+    } else {
+      const parentPath = parts.slice(0, -1).join('/');
+      const parent = ensureDir(parentPath);
+      parent.children.push(node);
+    }
+    return node;
+  }
+
+  for (const b of blobs) {
+    const parts    = b.path.split('/');
+    const filename = parts[parts.length - 1];
+    const fileNode = { name: filename, path: b.path, sha: b.sha, type: 'file', local: b.local || false };
+
+    if (parts.length === 1) {
+      root.push(fileNode);
+    } else {
+      const parentPath = parts.slice(0, -1).join('/');
+      const parent = ensureDir(parentPath);
+      parent.children.push(fileNode);
+    }
+  }
+  return root;
+}
+
+function collectAllFilterTags() {
+  const apps  = new Set();
+  const apis  = new Set();
+  const execs = new Set();
+  const dates = new Set();
+  Object.entries(tagsCache).forEach(([path, t]) => {
+    (t.apps || []).forEach(a => apps.add(a));
+    (t.apis || []).forEach(a => apis.add(a));
+    if (t.executor) execs.add(t.executor);
+    // trb-date meta tag preferred; fall back to date extracted from file path
+    const d = t.date || (path.match(/(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
+    if (d) dates.add(d);
+  });
+  allApps      = [...apps].sort();
+  allApis      = [...apis].sort();
+  allExecutors = [...execs].sort();
+  allDates     = [...dates].sort().reverse(); // newest first
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LOCAL-ONLY TREE — show local folder when GitHub not available
+// ═══════════════════════════════════════════════════════════
+async function grantAndLoad() {
+  if (await ensurePermission()) loadLocalOnlyTree();
+  else showToast('Folder access denied', 'error');
+}
+
+async function loadLocalOnlyTree() {
+  if (!dirHandle) {
+    document.getElementById('treeContainer').innerHTML =
+      '<div class="tree-empty">Configure GitHub repository<br>or select a local folder in Settings.</div>';
+    return;
+  }
+  const perm = await dirHandle.queryPermission({ mode: 'readwrite' });
+  if (perm !== 'granted') {
+    document.getElementById('treeContainer').innerHTML =
+      '<div class="tree-empty">Folder access needs confirmation.<br><button class="btn btn-primary" style="margin-top:8px" onclick="grantAndLoad()">Grant Access</button></div>';
+    return;
+  }
+  document.getElementById('treeContainer').innerHTML =
+    '<div class="tree-empty"><div class="spinner" style="margin:0 auto 8px"></div>Scanning local folder…</div>';
+
+  const rawLocal = await scanLocalFolder(dirHandle, '');
+  if (rawLocal.length === 0) {
+    document.getElementById('treeContainer').innerHTML =
+      '<div class="tree-empty">No HTML reports found<br>in local folder.</div>';
+    return;
+  }
+  const localFiles = rawLocal.map(f => ({ ...f, path: 'reports/' + f.path }));
+
+  tree = buildTree(localFiles);
+  tagsCache = lsObj('rvw-tags') || {};
+  shaMap    = lsObj('rvw-sha')  || {};
+  collectAllFilterTags();
+  renderTree();
+  showToast('Local: ' + localFiles.length + ' report(s)', 'success');
+  startPrefetch(localFiles);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LOAD TREE  (tries git/trees first, falls back to /contents walk)
+// ═══════════════════════════════════════════════════════════
+async function loadTree() {
+  const repo   = cfg('repo');
+  const branch = cfg('branch') || 'main';
+  const root   = 'reports';
+  if (!repo || !sessionId) {
+    // No GitHub config — show local files only if folder is set
+    await loadLocalOnlyTree();
+    return;
+  }
+
+  document.getElementById('treeContainer').innerHTML = '<div class="tree-empty"><div class="spinner" style="margin:0 auto 8px"></div>Loading tree…</div>';
+
+  let blobs = null;
+
+  // Strategy 1: git/trees — one request, needs Contents:Read
+  try {
+    const data = await ghFetch(`https://api.github.com/repos/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`);
+    if (data && data.tree) {
+      blobs = data.tree
+        .filter(b => b.type === 'blob' && b.path.endsWith('.html'))
+        .map(b => ({ path: b.path, sha: b.sha }));
+      if (root) {
+        const prefix = root.endsWith('/') ? root : root + '/';
+        blobs = blobs.filter(b => b.path.startsWith(prefix));
+      }
+      console.log('[ReportViewer] loaded via git/trees:', blobs.length, 'HTML files');
+    }
+  } catch (e) {
+    console.warn('[ReportViewer] git/trees failed (' + e.message + '), trying /contents fallback…');
+  }
+
+  // Strategy 2: /contents recursive walk — works with fine-grained PAT Contents:Read only
+  if (!blobs) {
+    try {
+      const startPath = root ? root.replace(/\/$/, '') : '';
+      blobs = await walkContents(repo, branch, startPath);
+      console.log('[ReportViewer] loaded via /contents walk:', blobs.length, 'HTML files');
+    } catch (e) {
+      console.error('[ReportViewer] /contents walk failed:', e.message);
+      // GitHub failed — fall back to local-only tree
+      await loadLocalOnlyTree();
+      return;
+    }
+  }
+
+  // Merge files from local folder that are not in GitHub
+  blobs = await mergeLocalFiles(blobs);
+
+  tree = buildTree(blobs);
+  tagsCache = lsObj('rvw-tags') || {};
+  shaMap    = lsObj('rvw-sha')  || {};
+  // Prune stale tag entries for files no longer in the repo/local set
+  const livePaths = new Set(blobs.map(b => b.path));
+  Object.keys(tagsCache).forEach(p => { if (!livePaths.has(p)) delete tagsCache[p]; });
+  lsObj('rvw-tags', tagsCache);
+  collectAllFilterTags();
+  renderTree();
+  showToast('Loaded ' + blobs.length + ' report(s)', 'success');
+  startPrefetch(blobs);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LOCAL FOLDER SCAN — files not in GitHub
+// ═══════════════════════════════════════════════════════════
+async function scanLocalFolder(folderHandle, prefix) {
+  const results = [];
+  try {
+    for await (const [name, handle] of folderHandle.entries()) {
+      const path = prefix ? prefix + '/' + name : name;
+      if (handle.kind === 'file' && name.endsWith('.html')) {
+        results.push({ path, sha: 'local', local: true });
+      } else if (handle.kind === 'directory') {
+        const children = await scanLocalFolder(handle, path);
+        results.push(...children);
+      }
+    }
+  } catch (e) {
+    console.warn('[ReportViewer] scanLocalFolder error:', e.message);
+  }
+  return results;
+}
+
+async function mergeLocalFiles(blobs) {
+  if (!dirHandle) return blobs;
+  // Use silent check — if permission needs a dialog, skip merge (will work after user interaction)
+  if (!await checkPermissionSilent()) return blobs;
+
+  const knownPaths = new Set(blobs.map(b => b.path));
+
+  // Files are written to disk without the 'reports/' prefix (stripped by relPath()).
+  // Scan from dirHandle root and re-add 'reports/' prefix to match GitHub blob paths.
+  let localFiles;
+  try {
+    const rawFiles = await scanLocalFolder(dirHandle, '');
+    localFiles = rawFiles.map(f => ({ ...f, path: 'reports/' + f.path }));
+  } catch { return blobs; }
+
+  const extras = localFiles.filter(f => !knownPaths.has(f.path));
+  if (extras.length > 0) {
+    console.log('[ReportViewer] local-only files:', extras.length, extras.map(e => e.path));
+  }
+  return [...blobs, ...extras];
+}
+
+// Walk /contents API recursively — fine-grained PAT friendly
+async function walkContents(repo, branch, dirPath) {
+  const encodedPath = dirPath ? dirPath.split('/').map(encodeURIComponent).join('/') : '';
+  const url = 'https://api.github.com/repos/' + repo + '/contents/' + encodedPath + '?ref=' + encodeURIComponent(branch);
+  const items = await ghFetch(url);
+  if (!Array.isArray(items)) return [];
+
+  const results = [];
+  const subdirs = [];
+  for (const item of items) {
+    if (item.type === 'file' && item.name.endsWith('.html')) {
+      results.push({ path: item.path, sha: item.sha });
+    } else if (item.type === 'dir') {
+      subdirs.push(walkContents(repo, branch, item.path));
+    }
+  }
+  const nested = await Promise.all(subdirs);
+  for (const n of nested) results.push(...n);
+  return results;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SYNC ENGINE  (batched parallel, background + manual modes)
+// ═══════════════════════════════════════════════════════════
+let prefetchAbort  = false;  // signal to abort background prefetch
+let isSyncing      = false;  // manual sync in progress
+let bgPollTimer    = null;   // periodic background refresh handle
+const BG_POLL_MS   = 5 * 60 * 1000; // 5-minute poll interval
+let syncCancelled  = false;  // user pressed Cancel
+
+function relPath(fullPath) {
+  return fullPath.startsWith('reports/') ? fullPath.slice('reports/'.length) : fullPath;
+}
+
+// True when parsed tags carry any useful metadata worth caching
+// (apps/apis/date/executor OR status OR non-zero counts). Skips truly-empty legacy reports.
+function hasUsefulTags(t) {
+  return !!(t.apps.length || t.apis.length || t.date || t.executor || t.status ||
+            t.counts.passed || t.counts.failed || t.counts.skipped);
+}
+
+// Core batched downloader — shared by both modes
+// onProgress(done, total, mode) — mode: 'bg' | 'sync'
+async function syncBatch(files, batchSize, delayMs, mode, onProgress) {
+  let done = 0;
+  let lastRender = 0;
+  for (let i = 0; i < files.length; i += batchSize) {
+    // Check abort signals
+    if (mode === 'bg'   && prefetchAbort)  { prefetchAbort = false; break; }
+    if (mode === 'sync' && syncCancelled)  break;
+
+    const batch = files.slice(i, i + batchSize);
+    await Promise.all(batch.map(async f => {
+      try {
+        const html = await downloadFile(f.path);
+        await writeFile(relPath(f.path), html);
+        shaMap[f.path] = f.sha;
+        // Parse and cache tags from HTML content
+        try {
+          const parsed = parseReportTags(html);
+          if (hasUsefulTags(parsed)) {
+            tagsCache[f.path] = parsed;
+          }
+        } catch {}
+      } catch (e) {
+        // 429 rate limit — wait and retry once
+        if (e.message === '429') {
+          await new Promise(r => setTimeout(r, 4000));
+          try {
+            const html = await downloadFile(f.path);
+            await writeFile(relPath(f.path), html);
+            shaMap[f.path] = f.sha;
+            try {
+              const parsed = parseReportTags(html);
+              if (hasUsefulTags(parsed)) tagsCache[f.path] = parsed;
+            } catch {}
+          } catch {}
+        } else {
+          console.warn('syncBatch error', f.path, e.message);
+        }
+      }
+      done++;
+      if (onProgress) onProgress(done, files.length, mode);
+    }));
+
+    lsObj('rvw-sha', shaMap);
+    lsObj('rvw-tags', tagsCache);
+    const nowTs = Date.now();
+    if (nowTs - lastRender > 800) {
+      lastRender = nowTs;
+      collectAllFilterTags();
+      renderTree();  // update green checkmarks live (throttled)
+    }
+
+    if (i + batchSize < files.length) {
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+  lsObj('rvw-sha', shaMap);
+  collectAllFilterTags();
+  renderTree();
+}
+
+// ── Topbar progress bar helpers ──
+function showTopbarProgress(mode) {
+  const bar  = document.getElementById('syncProgress');
+  const fill = document.getElementById('progressFill');
+  bar.classList.add('visible');
+  fill.classList.toggle('syncing', mode === 'sync');
+  fill.style.width = '0%';
+}
+function updateTopbarProgress(done, total) {
+  document.getElementById('progressFill').style.width = Math.round(done / total * 100) + '%';
+  document.getElementById('progressText').textContent = done + ' / ' + total;
+}
+function hideTopbarProgress() {
+  setTimeout(() => {
+    const bar = document.getElementById('syncProgress');
+    bar.classList.remove('visible');
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('progressFill').classList.remove('syncing');
+  }, 1200);
+}
+
+// ── Sync overlay (manual mode only) ──
+function showSyncOverlay(total) {
+  document.getElementById('syncOverlayFill').style.width = '0%';
+  document.getElementById('syncOverlayLabel').textContent = '0 / ' + total;
+  document.getElementById('syncOverlayTitle').textContent = 'Syncing repository…';
+  document.getElementById('syncOverlay').classList.add('open');
+}
+function updateSyncOverlay(done, total) {
+  document.getElementById('syncOverlayFill').style.width = Math.round(done / total * 100) + '%';
+  document.getElementById('syncOverlayLabel').textContent = done + ' of ' + total + ' files · ' + Math.round(done / total * 100) + '%';
+}
+function hideSyncOverlay() {
+  document.getElementById('syncOverlay').classList.remove('open');
+}
+function cancelSync() {
+  syncCancelled = true;
+  hideSyncOverlay();
+  hideTopbarProgress();
+  showToast('Sync cancelled — ' + Object.keys(shaMap).length + ' files cached', 'warn');
+}
+
+// ── Periodic background refresh ──
+function startBgPoll() {
+  stopBgPoll();
+  if (!cfg('repo') || !sessionId || !dirHandle) return;
+  bgPollTimer = setInterval(bgRefresh, BG_POLL_MS);
+}
+
+function stopBgPoll() {
+  clearInterval(bgPollTimer);
+  bgPollTimer = null;
+}
+
+async function bgRefresh() {
+  if (isSyncing || !cfg('repo') || !sessionId || !dirHandle) return;
+  try {
+    const repo   = cfg('repo');
+    const branch = cfg('branch') || 'main';
+    const root   = 'reports';
+    let blobs = null;
+    try {
+      const data = await ghFetch('https://api.github.com/repos/' + repo + '/git/trees/' + encodeURIComponent(branch) + '?recursive=1');
+      if (data && data.tree) {
+        blobs = data.tree.filter(b => b.type === 'blob' && b.path.endsWith('.html')).map(b => ({ path: b.path, sha: b.sha }));
+        if (root) { const p = root.endsWith('/') ? root : root + '/'; blobs = blobs.filter(b => b.path.startsWith(p)); }
+      }
+    } catch {}
+    if (!blobs) {
+      try {
+        const startPath = root ? root.replace(/\/$/, '') : '';
+        blobs = await walkContents(repo, branch, startPath);
+      } catch { return; }
+    }
+    if (!blobs) return;
+    const missing = blobs.filter(b => !b.local && shaMap[b.path] !== b.sha);
+    if (missing.length === 0) return;
+    prefetchAbort = false;
+    blobs = await mergeLocalFiles(blobs);
+    tree = buildTree(blobs);
+    collectAllFilterTags();
+    renderTree();
+    showTopbarProgress('bg');
+    document.getElementById('progressText').textContent = 'syncing…';
+    await syncBatch(missing, 10, 200, 'bg', (done, total) => {
+      updateTopbarProgress(done, total);
+      document.getElementById('progressText').textContent = 'syncing ' + done + ' / ' + total;
+    });
+    hideTopbarProgress();
+    if (!prefetchAbort) showToast(missing.length + ' new report(s) synced', 'success');
+  } catch (e) {
+    console.warn('[ReportViewer] bgRefresh error', e.message);
+  }
+}
+
+// ── Background prefetch — runs silently on startup ──
+async function startPrefetch(blobs) {
+  stopBgPoll();
+  if (!dirHandle) return;
+
+  const missing    = blobs.filter(b => !b.local && shaMap[b.path] !== b.sha);
+  const needsTags  = blobs.filter(b => (b.local || shaMap[b.path] === b.sha) && !tagsCache[b.path]);
+
+  // Parse tags for already-cached files (no download needed — read from disk)
+  if (needsTags.length > 0) {
+    console.log('[ReportViewer] parsing tags for', needsTags.length, 'cached file(s)…');
+    let parsed = 0;
+    for (const f of needsTags) {
+      if (prefetchAbort) break;
+      try {
+        const html = await readLocalFile(relPath(f.path));
+        if (html) {
+          const tags = parseReportTags(html);
+          if (hasUsefulTags(tags)) {
+            tagsCache[f.path] = tags;
+            parsed++;
+          }
+        }
+      } catch {}
+    }
+    if (parsed > 0) {
+      lsObj('rvw-tags', tagsCache);
+      collectAllFilterTags();
+      renderTree();
+      console.log('[ReportViewer] tags parsed for', parsed, 'file(s). Apps:', allApps, 'APIs:', allApis);
+    }
+  }
+
+  if (missing.length === 0) {
+    if (!prefetchAbort) startBgPoll();
+    return;
+  }
+
+  showTopbarProgress('bg');
+  document.getElementById('progressText').textContent = 'prefetching…';
+
+  await syncBatch(missing, 10, 200, 'bg', (done, total) => {
+    updateTopbarProgress(done, total);
+    document.getElementById('progressText').textContent = 'prefetching ' + done + ' / ' + total;
+  });
+
+  hideTopbarProgress();
+  if (!prefetchAbort) {
+    showToast('Cache ready — ' + missing.length + ' file(s) synced', 'success');
+    startBgPoll();
+  }
+}
+
+// ── Manual Sync button — delta + overlay ──
+async function startSync() {
+  if (!cfg('repo') || !sessionId) { showToast('Configure settings first', 'warn'); return; }
+  if (!dirHandle) { showToast('Select a local cache folder in Settings first', 'warn'); return; }
+  if (isSyncing) return;
+
+  isSyncing     = true;
+  syncCancelled = false;
+  prefetchAbort = true;
+  stopBgPoll();  // kill periodic poll — sync covers everything, no restart after
+
+  const repo   = cfg('repo');
+  const branch = cfg('branch') || 'main';
+  const root   = 'reports';
+
+  document.getElementById('syncIcon').classList.add('spinning');
+  showToast('Checking for updates…');
+
+  try {
+    // Refresh tree from GitHub
+    let blobs = null;
+    try {
+      const data = await ghFetch('https://api.github.com/repos/' + repo + '/git/trees/' + encodeURIComponent(branch) + '?recursive=1');
+      if (data && data.tree) {
+        blobs = data.tree.filter(b => b.type === 'blob' && b.path.endsWith('.html')).map(b => ({ path: b.path, sha: b.sha }));
+        if (root) { const p = root.endsWith('/') ? root : root + '/'; blobs = blobs.filter(b => b.path.startsWith(p)); }
+      }
+    } catch {}
+    if (!blobs) {
+      const startPath = root ? root.replace(/\/$/, '') : '';
+      blobs = await walkContents(repo, branch, startPath);
+    }
+
+    // Rebuild tree in case new files appeared
+    blobs = await mergeLocalFiles(blobs);
+    tree = buildTree(blobs);
+    // Merge localStorage into in-memory (don't overwrite prefetch work not yet persisted)
+    const savedTags = lsObj('rvw-tags') || {};
+    tagsCache = { ...savedTags, ...tagsCache };
+    // Prune stale entries for files no longer on GitHub
+    const livePaths = new Set(blobs.map(b => b.path));
+    Object.keys(tagsCache).forEach(p => { if (!livePaths.has(p)) delete tagsCache[p]; });
+    lsObj('rvw-tags', tagsCache);
+    collectAllFilterTags();
+    renderTree();
+
+    const toSync = blobs.filter(b => !b.local && shaMap[b.path] !== b.sha);
+    if (toSync.length === 0) {
+      showToast('Already up to date', 'success');
+      isSyncing = false;
+      document.getElementById('syncIcon').classList.remove('spinning');
+      return;
+    }
+
+    showTopbarProgress('sync');
+    showSyncOverlay(toSync.length);
+
+    await syncBatch(toSync, 10, 100, 'sync', (done, total) => {
+      updateTopbarProgress(done, total);
+      updateSyncOverlay(done, total);
+    });
+
+    hideSyncOverlay();
+    hideTopbarProgress();
+
+    if (!syncCancelled) {
+      showToast('Sync complete — ' + toSync.length + ' file(s) updated', 'success');
+    }
+  } catch (e) {
+    console.error('startSync failed', e);
+    hideSyncOverlay();
+    hideTopbarProgress();
+    showToast('Sync failed: ' + e.message, 'error');
+  }
+
+  isSyncing = false;
+  document.getElementById('syncIcon').classList.remove('spinning');
+}
+
+// ── Priority download (user clicked a file not yet cached) ──
+async function priorityDownload(node) {
+  const html = await downloadFile(node.path);
+  await writeFile(relPath(node.path), html);
+  shaMap[node.path] = node.sha;
+  lsObj('rvw-sha', shaMap);
+  // Parse tags
+  try {
+    const parsed = parseReportTags(html);
+    if (hasUsefulTags(parsed)) {
+      tagsCache[node.path] = parsed;
+      lsObj('rvw-tags', tagsCache);
+      collectAllFilterTags();
+    }
+  } catch {}
+  renderTree();
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FILTER DROPDOWN
+// ═══════════════════════════════════════════════════════════
+function toggleFilterDropdown() {
+  filterOpen = !filterOpen;
+  document.getElementById('filterDropdown').classList.toggle('open', filterOpen);
+  if (filterOpen) {
+    document.getElementById('fdSearch').value = '';
+    pendingApps      = [...activeApps];
+    pendingApis      = [...activeApis];
+    pendingExecutors = [...activeExecutors];
+    pendingDates     = [...activeDates];
+    renderFilterDropdown();
+    // Use mousedown — fires before click, before innerHTML re-render destroys nodes
+    setTimeout(() => document.addEventListener('mousedown', closeFilterOutside), 0);
+  } else {
+    document.removeEventListener('mousedown', closeFilterOutside);
+  }
+}
+
+function closeFilterOutside(e) {
+  const bar = document.getElementById('filterBar');
+  // Check at mousedown time — DOM hasn't been re-rendered yet
+  if (!bar.contains(e.target)) {
+    filterOpen = false;
+    document.getElementById('filterDropdown').classList.remove('open');
+    document.removeEventListener('mousedown', closeFilterOutside);
+  }
+}
+
+function renderFilterDropdown() {
+  const q = (document.getElementById('fdSearch').value || '').toLowerCase();
+
+  function renderGroup(elId, all, pending, type) {
+    const el = document.getElementById(elId);
+    const filtered = q ? all.filter(t => t.toLowerCase().includes(q)) : all;
+    if (filtered.length === 0) {
+      el.innerHTML = `<span class="fd-empty">${q ? 'No matches' : 'None yet'}</span>`;
+      return;
+    }
+    el.innerHTML = filtered.map(t => {
+      const sel = pending.includes(t);
+      return `<span class="fd-tag${sel ? ' sel-' + type : ''}" data-tag="${esc(t)}" data-type="${type}">${esc(t)}</span>`;
+    }).join('');
+  }
+
+  renderGroup('fdApps', allApps, pendingApps, 'app');
+  renderGroup('fdApis', allApis, pendingApis, 'api');
+  const execSection = document.getElementById('fdExecSection');
+  if (allExecutors.length > 0) {
+    execSection.style.display = '';
+    renderGroup('fdExecutors', allExecutors, pendingExecutors, 'exec');
+  } else {
+    execSection.style.display = 'none';
+  }
+  const dateSection = document.getElementById('fdDateSection');
+  if (allDates.length > 0) {
+    dateSection.style.display = '';
+    renderGroup('fdDates', allDates, pendingDates, 'date');
+  } else {
+    dateSection.style.display = 'none';
+  }
+}
+
+function togglePending(t, type) {
+  if (type === 'app') {
+    pendingApps = pendingApps.includes(t) ? pendingApps.filter(x => x !== t) : [...pendingApps, t];
+  } else if (type === 'api') {
+    pendingApis = pendingApis.includes(t) ? pendingApis.filter(x => x !== t) : [...pendingApis, t];
+  } else if (type === 'exec') {
+    pendingExecutors = pendingExecutors.includes(t) ? pendingExecutors.filter(x => x !== t) : [...pendingExecutors, t];
+  } else {
+    pendingDates = pendingDates.includes(t) ? pendingDates.filter(x => x !== t) : [...pendingDates, t];
+  }
+  renderFilterDropdown();
+}
+
+function applyFilters() {
+  activeApps      = [...pendingApps];
+  activeApis      = [...pendingApis];
+  activeExecutors = [...pendingExecutors];
+  activeDates     = [...pendingDates];
+  filterOpen = false;
+  document.getElementById('filterDropdown').classList.remove('open');
+  document.removeEventListener('mousedown', closeFilterOutside);
+  updateFilterBtn();
+  renderActiveStrip();
+  renderTree();
+}
+
+function clearFilters() {
+  pendingApps = []; pendingApis = []; pendingExecutors = []; pendingDates = [];
+  activeApps  = []; activeApis  = []; activeExecutors  = []; activeDates  = [];
+  filterOpen = false;
+  document.getElementById('filterDropdown').classList.remove('open');
+  document.removeEventListener('mousedown', closeFilterOutside);
+  updateFilterBtn();
+  renderActiveStrip();
+  renderTree();
+}
+
+function removeActiveFilter(t, type) {
+  if      (type === 'app')  activeApps      = activeApps.filter(x => x !== t);
+  else if (type === 'api')  activeApis      = activeApis.filter(x => x !== t);
+  else if (type === 'exec') activeExecutors = activeExecutors.filter(x => x !== t);
+  else                      activeDates     = activeDates.filter(x => x !== t);
+  pendingApps = [...activeApps]; pendingApis = [...activeApis]; pendingExecutors = [...activeExecutors]; pendingDates = [...activeDates];
+  updateFilterBtn();
+  renderActiveStrip();
+  renderTree();
+}
+
+function updateFilterBtn() {
+  const total = activeApps.length + activeApis.length + activeExecutors.length + activeDates.length;
+  const btn   = document.getElementById('filterBtn');
+  const cnt   = document.getElementById('filterCount');
+  btn.classList.toggle('has-filters', total > 0);
+  cnt.style.display = total > 0 ? 'inline' : 'none';
+  cnt.textContent   = total;
+}
+
+function renderActiveStrip() {
+  const strip = document.getElementById('activeFilters');
+  const total = activeApps.length + activeApis.length + activeExecutors.length + activeDates.length;
+  if (total === 0) { strip.classList.remove('visible'); return; }
+  strip.classList.add('visible');
+  const chips = [
+    ...activeApps.map(t      => `<span class="af-chip app"  data-tag="${esc(t)}" data-type="app"  title="Remove">${esc(t)} ×</span>`),
+    ...activeApis.map(t      => `<span class="af-chip api"  data-tag="${esc(t)}" data-type="api"  title="Remove">${esc(t)} ×</span>`),
+    ...activeExecutors.map(t => `<span class="af-chip exec" data-tag="${esc(t)}" data-type="exec" title="Remove">${esc(t)} ×</span>`),
+    ...activeDates.map(t     => `<span class="af-chip date" data-tag="${esc(t)}" data-type="date" title="Remove">${esc(t)} ×</span>`),
+  ];
+  strip.innerHTML = `<span class="af-label">Active:</span>${chips.join('')}`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER TREE
+// ═══════════════════════════════════════════════════════════
+function fileMatchesFilter(node) {
+  const q = searchQ.toLowerCase();
+  const tags = tagsCache[node.path] || { apps: [], apis: [], executor: '', date: '' };
+  // date: trb-date meta preferred, fallback to date in file path
+  const fileDate = tags.date || (node.path.match(/(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
+
+  // Search: matches filename OR any app/api/executor/date/jira tag
+  if (q) {
+    const nameMatch = node.name.toLowerCase().includes(q);
+    const appMatch  = tags.apps.some(a => a.toLowerCase().includes(q));
+    const apiMatch  = tags.apis.some(a => a.toLowerCase().includes(q));
+    const execMatch = (tags.executor || '').toLowerCase().includes(q);
+    const dateMatch = fileDate.includes(q);
+    const jiraMatch = (tags.jiras || []).some(j => j.toLowerCase().includes(q));
+    if (!nameMatch && !appMatch && !apiMatch && !execMatch && !dateMatch && !jiraMatch) return false;
+  }
+
+  // Filter dropdown: OR within group, AND between groups
+  if (activeApps.length      && !activeApps.some(a => tags.apps.includes(a)))   return false;
+  if (activeApis.length      && !activeApis.some(a => tags.apis.includes(a)))   return false;
+  if (activeExecutors.length && !activeExecutors.includes(tags.executor || '')) return false;
+  if (activeDates.length     && !activeDates.includes(fileDate))                 return false;
+
+  return true;
+}
+
+function dirMatchesSearch(node) {
+  // A dir matches if its own name matches the search query (show all children)
+  if (!searchQ) return false;
+  return node.name.toLowerCase().includes(searchQ.toLowerCase());
+}
+
+function dirHasVisibleChildren(node) {
+  if (node.type === 'file') return fileMatchesFilter(node);
+  // If the dir name itself matches — show the whole subtree
+  if (dirMatchesSearch(node)) return true;
+  return (node.children || []).some(dirHasVisibleChildren);
+}
+
+function renderTree() {
+  const container = document.getElementById('treeContainer');
+  if (tree.length === 0) {
+    container.innerHTML = '<div class="tree-empty">No reports found.<br>Check your repository settings.</div>';
+    return;
+  }
+  const html = renderNodes(tree, 0);
+  container.innerHTML = html || '<div class="tree-empty">No results match your filter.</div>';
+}
+
+function renderNodes(nodes, depth, parentDirMatches) {
+  return nodes.map(n => {
+    // If parent dir matched by name — show all children unconditionally
+    if (parentDirMatches) {
+      if (n.type === 'dir') return renderFolderFull(n, depth);
+      return renderFile(n, depth);
+    }
+    if (!dirHasVisibleChildren(n)) return '';
+    if (n.type === 'dir') return renderFolder(n, depth);
+    return renderFile(n, depth);
+  }).join('');
+}
+
+// Render folder and ALL its children (used when folder name matched search)
+function renderFolderFull(n, depth) {
+  const isOpen = n.open !== false;
+  return `
+<div class="folder-row" data-path="${esc(n.path)}" style="padding-left:${8 + depth * 12}px">
+  <svg class="folder-chevron${isOpen ? ' open' : ''}" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+  <svg class="folder-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+  <span class="folder-name">${esc(n.name)}</span>
+</div>
+<div class="${isOpen ? 'folder-children' : 'folder-children collapsed'}" id="fc-${esc(n.path).replace(/\//g,'-')}">
+  ${renderNodes(n.children || [], depth + 1, true)}
+</div>`;
+}
+
+function renderFolder(n, depth) {
+  const isOpen = n.open !== false;
+  const thisDirMatches = dirMatchesSearch(n);
+  return `
+<div class="folder-row" data-path="${esc(n.path)}" style="padding-left:${8 + depth * 12}px">
+  <svg class="folder-chevron${isOpen ? ' open' : ''}" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+  <svg class="folder-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+  <span class="folder-name">${esc(n.name)}</span>
+</div>
+<div class="${isOpen ? 'folder-children' : 'folder-children collapsed'}" id="fc-${esc(n.path).replace(/\//g,'-')}">
+  ${renderNodes(n.children || [], depth + 1, thisDirMatches)}
+</div>`;
+}
+
+function renderFile(n, depth) {
+  const active    = activeFile && activeFile.path === n.path;
+  const cached    = n.local || shaMap[n.path] === n.sha;
+  const localOnly = !!n.local;
+  const cached_tags = tagsCache[n.path] || {};
+  const status    = cached_tags.status ?? null;
+  const counts    = cached_tags.counts;
+  const dotClass  = status ? ` ${status}` : '';
+  return `
+<div class="file-row${active ? ' active' : ''}" data-path="${esc(n.path)}" style="padding-left:${12 + depth * 12}px">
+  <div class="status-dot${dotClass}"></div>
+  <svg class="file-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+  <span class="file-name">${esc(n.name)}</span>
+  ${localOnly ? `<svg class="file-cached" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2.5" title="Local only — not in GitHub"><path d="M3 3l18 18M10.5 10.677A2 2 0 0112 10c1.1 0 2 .9 2 2 0 .402-.118.777-.323 1.089"/><path d="M6.161 6.162A8 8 0 0020.485 19M3.515 5C2.566 6.226 2 7.75 2 9.4V10"/></svg>` : cached ? `<svg class="file-cached" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5" title="Cached locally"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
+</div>`;
+}
+
+function showHoverInfo(path) {
+  clearTimeout(hoverTimer);
+  hoverTimer = setTimeout(() => {
+    const t = tagsCache[path] || {};
+    const status = t.status || '';
+    const counts = t.counts;
+    const el = document.getElementById('hoverInfo');
+    if (!el) return;
+    const dotCls = status ? ` ${status}` : '';
+    const statusLabel = status || 'no status';
+    let html = `<div class="hi-status"><div class="hi-dot${dotCls}"></div>${esc(statusLabel)}</div>`;
+    if (counts) {
+      html += `<div class="hi-counts"><span class="hi-c-pass">${counts.passed}✓</span><span class="hi-c-fail">${counts.failed}✗</span><span class="hi-c-skip">${counts.skipped}⊘</span></div>`;
+    } else {
+      html += `<div class="hi-counts" style="color:var(--text-3);font-style:italic;font-size:10px">not cached</div>`;
+    }
+    el.innerHTML = html;
+    el.classList.add('visible');
+  }, 300);
+}
+
+function hideHoverInfo() {
+  clearTimeout(hoverTimer);
+  const el = document.getElementById('hoverInfo');
+  if (el) el.classList.remove('visible');
+}
+
+function toggleFolder(path) {
+  let target = null;
+  (function walk(nodes) {
+    for (const n of nodes) {
+      if (n.path === path) { target = n; return true; }
+      if (n.children && walk(n.children)) return true;
+    }
+    return false;
+  })(tree);
+  if (!target) return;
+  target.open = !target.open;
+  // id matches renderFolder: 'fc-' + esc(path) with slashes → dashes. For normal paths
+  // esc is identity; on lookup miss (exotic chars), fall back to a full re-render.
+  const childrenEl = document.getElementById('fc-' + path.replace(/\//g, '-'));
+  if (!childrenEl) { renderTree(); return; }
+  childrenEl.classList.toggle('collapsed', !target.open);
+  const row = childrenEl.previousElementSibling;
+  const chev = row && row.querySelector('.folder-chevron');
+  if (chev) chev.classList.toggle('open', target.open);
+}
+
+// Event delegation — replaces interpolated inline onclick handlers (injection-safe).
+// Containers persist across innerHTML re-renders, so listeners are attached once.
+function wireDelegates() {
+  const tree = document.getElementById('treeContainer');
+  tree.addEventListener('click', e => {
+    const file = e.target.closest('.file-row');
+    if (file && file.dataset.path != null) { selectFile(file.dataset.path); return; }
+    const folder = e.target.closest('.folder-row');
+    if (folder && folder.dataset.path != null) { toggleFolder(folder.dataset.path); return; }
+  });
+  // hover info — emulate mouseenter/leave semantics with delegated mouseover/out
+  tree.addEventListener('mouseover', e => {
+    const row = e.target.closest('.file-row');
+    if (!row) return;
+    const from = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.file-row');
+    if (from === row) return;
+    showHoverInfo(row.dataset.path);
+  });
+  tree.addEventListener('mouseout', e => {
+    const row = e.target.closest('.file-row');
+    if (!row) return;
+    const to = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.file-row');
+    if (to === row) return;
+    hideHoverInfo();
+  });
+  document.getElementById('filterDropdown').addEventListener('click', e => {
+    const tag = e.target.closest('.fd-tag');
+    if (tag && tag.dataset.tag != null) togglePending(tag.dataset.tag, tag.dataset.type);
+  });
+  document.getElementById('activeFilters').addEventListener('click', e => {
+    const chip = e.target.closest('.af-chip');
+    if (chip && chip.dataset.tag != null) removeActiveFilter(chip.dataset.tag, chip.dataset.type);
+  });
+}
+
+let searchDebounce;
+function onSearch() {
+  searchQ = document.getElementById('searchInput').value;
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(renderTree, 150);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SELECT & OPEN FILE
+// ═══════════════════════════════════════════════════════════
+function findNode(path, nodes) {
+  for (const n of nodes) {
+    if (n.path === path) return n;
+    if (n.children) { const r = findNode(path, n.children); if (r) return r; }
+  }
+  return null;
+}
+
+async function selectFile(path) {
+  const node = findNode(path, tree);
+  if (!node) return;
+  activeFile = node;
+  renderTree();
+  await openReport(node);
+}
+
+async function openReport(node) {
+  showLoading('Opening ' + node.name + '…');
+  let html = null;
+
+  // 1. Try local cache
+  if (dirHandle) {
+    const relPath = node.path.startsWith('reports/') ? node.path.slice('reports/'.length) : node.path;
+    // Local-only files (not in GitHub) — read directly from disk, never download
+    if (node.local) {
+      if (!await checkPermissionSilent()) {
+        // Permission not granted yet — try requesting it (requires user gesture, should work here)
+        if (!await ensurePermission()) {
+          showToast('Cannot access local folder. Please re-select it in Settings.', 'error');
+          showEmpty(); return;
+        }
+      }
+      html = await readLocalFile(relPath);
+      if (!html) { showToast('Cannot read local file: ' + node.name, 'error'); showEmpty(); return; }
+    } else if (shaMap[node.path] === node.sha) {
+      html = await readLocalFile(relPath);
+    }
+    if (!html && !node.local) {
+      // file not cached or stale — download and cache
+      try {
+        html = await downloadFile(node.path);
+        const ok = await writeFile(relPath, html);
+        if (ok) { shaMap[node.path] = node.sha; lsObj('rvw-sha', shaMap); renderTree(); }
+      } catch (e) { showToast('Failed to download: ' + node.name, 'error'); showEmpty(); return; }
+    }
+  } else {
+    // No local folder — direct API download
+    try {
+      html = await priorityDownload(node);
+    } catch (e) { showToast('Failed to download: ' + node.name, 'error'); showEmpty(); return; }
+  }
+
+  // Parse and cache tags from opened HTML (in case sync hasn't done it yet)
+  try {
+    const parsed = parseReportTags(html);
+    if (hasUsefulTags(parsed)) {
+      tagsCache[node.path] = parsed;
+      lsObj('rvw-tags', tagsCache);
+      collectAllFilterTags();
+      renderTree();
+    }
+  } catch {}
+
+  // Show layout first — iframe must be visible (display:block) before src is set
+  // otherwise browser may silently skip the load
+  showReport(node);
+
+  currentReportHtml = html;
+  // Create new blob URL
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const newBlobUrl = URL.createObjectURL(blob);
+
+  const frame = document.getElementById('reportFrame');
+
+  // Revoke the previous report's blob now: the iframe keeps showing its already-loaded
+  // document until the new src loads, and a tab opened from the old URL stays valid after
+  // revoke. This avoids the leak when rapid clicks overwrite onload or when load never fires.
+  if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+  currentBlobUrl = newBlobUrl;
+
+  // Small rAF delay ensures display:block has been painted before src assignment
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      frame.src = newBlobUrl;
+    });
+  });
+}
+
+function showReport(node) {
+  document.getElementById('emptyState').style.display  = 'none';
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('reportFrame').style.display  = 'block';
+  document.getElementById('breadcrumbBar').style.display = '';
+  document.getElementById('metaBar').style.display       = '';
+  renderBreadcrumb(node);
+  renderMetaBar(node);
+}
+
+function showLoading(msg) {
+  document.getElementById('emptyState').style.display   = 'none';
+  document.getElementById('loadingState').style.display = 'flex';
+  document.getElementById('reportFrame').style.display  = 'none';
+  document.getElementById('loadingText').textContent    = msg || 'Loading…';
+}
+
+function showEmpty() {
+  document.getElementById('emptyState').style.display   = 'flex';
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('reportFrame').style.display  = 'none';
+  document.getElementById('breadcrumbBar').style.display = 'none';
+  document.getElementById('metaBar').style.display       = 'none';
+}
+
+function renderBreadcrumb(node) {
+  const parts = node.path.split('/');
+  const file  = parts.pop();
+  const path  = parts.map(p => `<span style="color:var(--text-3)">${esc(p)}</span><span style="color:var(--text-3);margin:0 2px">/</span>`).join('');
+  document.getElementById('breadcrumbText').innerHTML = path + `<b>${esc(file)}</b>`;
+}
+
+function renderMetaBar(node) {
+  const bar = document.getElementById('metaBar');
+  const parts = node.path.split('/');
+  // parts[0] is always the hardcoded 'reports' root; the real service is the folder under it
+  const service = parts.length > 2 ? parts[1] : '—';
+
+  const nodeTags = tagsCache[node.path] || { apps: [], apis: [], date: '', jiras: [] };
+
+  // Date: prefer trb-date from cached tags, fall back to a date in the filename
+  const dateM = node.name.match(/(\d{4}-\d{2}-\d{2})/);
+  const date  = nodeTags.date || (dateM ? dateM[1] : '—');
+  const allNodeTags = [...nodeTags.apps, ...nodeTags.apis];
+  const tagHtml = allNodeTags.length
+    ? allNodeTags.map(t => `<span class="meta-tag">${esc(t)}</span>`).join(' ')
+    : '<span style="color:var(--text-3);font-size:11px">—</span>';
+
+  const jiras = nodeTags.jiras || [];
+  const jiraHtml = jiras.length
+    ? jiras.map(url => {
+        const label = url.split('/').filter(Boolean).pop() || url;
+        return `<a href="${url.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" target="_blank" rel="noopener noreferrer" class="meta-jira-link">${esc(label)} &#8599;</a>`;
+      }).join(' ')
+    : '';
+
+  bar.innerHTML = `
+    <div class="meta-item"><span class="meta-label">Service</span><span class="meta-val">${esc(service)}</span></div>
+    <div class="meta-sep"></div>
+    <div class="meta-item"><span class="meta-label">Date</span><span class="meta-val">${esc(date)}</span></div>
+    <div class="meta-sep"></div>
+    <div class="meta-item"><span class="meta-label">Tags</span>${tagHtml}</div>
+    ${jiraHtml ? `<div class="meta-sep"></div><div class="meta-item"><span class="meta-label">Jira</span>${jiraHtml}</div>` : ''}
+  `;
+}
+
+function openInTab() {
+  if (!currentReportHtml) return;
+  const w = window.open('', '_blank');
+  if (!w) { showToast('Popup blocked — allow popups to open the report in a tab', 'warn'); return; }
+  // srcdoc must escape & and the " delimiter; sandbox without allow-same-origin isolates
+  // the report (opaque origin) so it cannot read this origin's localStorage / PAT token.
+  const safe = currentReportHtml.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  w.document.write(
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Report</title>' +
+    '<style>html,body{margin:0;height:100vh;overflow:hidden}iframe{border:0;width:100vw;height:100vh}</style>' +
+    '</head><body><iframe sandbox="allow-scripts allow-modals" srcdoc="' + safe + '"></iframe></body></html>'
+  );
+  w.document.close();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TEST CONNECTION
+// ═══════════════════════════════════════════════════════════
+async function testConnection() {
+  const res    = document.getElementById('testResult');
+  const repo   = (document.getElementById('sRepo')?.value || cfg('repo') || '').trim();
+  const branch = (document.getElementById('sBranch')?.value || cfg('branch') || 'main').trim();
+
+  res.style.display = 'block';
+  if (!sessionId) {
+    res.style.color = 'var(--error,#e05)';
+    res.textContent = 'Sign in first to test connection.';
+    return;
+  }
+  if (!repo) {
+    res.style.color = 'var(--error,#e05)';
+    res.textContent = 'Fill in repository first.';
+    return;
+  }
+
+  res.style.color = 'var(--text-2)';
+  res.textContent = 'Testing…';
+
+  try {
+    await ghFetch(`https://api.github.com/repos/${repo}`);
+    await ghFetch(`https://api.github.com/repos/${repo}/branches/${encodeURIComponent(branch)}`);
+    const user = localStorage.getItem('ghv-user') || 'authenticated';
+    res.style.color = 'var(--success,#3a3)';
+    res.textContent = `✓ Repo ✓ Branch — connected as ${user}`;
+  } catch (e) {
+    res.style.color = 'var(--error,#e05)';
+    res.textContent = 'Failed: ' + e.message;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+async function init() {
+  wireDelegates();
+  const theme = cfg('theme') || 'light';
+  applyTheme(theme);
+  updateRepoPill();
+  shaMap    = lsObj('rvw-sha')  || {};
+  tagsCache = lsObj('rvw-tags') || {};
+  collectAllFilterTags();
+  await restoreFolder();
+
+  const savedSid  = localStorage.getItem('ghv-sid');
+  const savedUser = localStorage.getItem('ghv-user');
+  if (savedSid) {
+    sessionId = savedSid;
+    setAuthUser(savedUser || '');
+  }
+  OAUTH_PROXY = localStorage.getItem('ghv-proxy-url') || '';
+  renderProxyConfig();
+  loadTree();
+}
+
+document.getElementById('btn-signin')?.addEventListener('click', startDeviceFlow);
+document.getElementById('btn-signout')?.addEventListener('click', () => clearAuth());
+document.getElementById('btn-proxy-save')?.addEventListener('click', saveProxyUrl);
+document.getElementById('proxy-url-input')?.addEventListener('keydown', e => { if (e.key === 'Enter') saveProxyUrl(); });
+document.getElementById('btn-proxy-change')?.addEventListener('click', () => {
+  OAUTH_PROXY = '';
+  localStorage.removeItem('ghv-proxy-url');
+  renderProxyConfig();
+});
+document.getElementById('btn-device-cancel')?.addEventListener('click', hideDeviceModal);
+document.getElementById('device-code-display')?.addEventListener('click', () => {
+  const code = document.getElementById('device-code-display')?.textContent || '';
+  navigator.clipboard?.writeText(code).catch(() => {});
+});
+
+init();
+</script>
+</body>
+</html>
