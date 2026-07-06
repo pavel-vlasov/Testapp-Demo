@@ -188,11 +188,12 @@ body {
 .git-modal-overlay.open { display: flex; }
 .git-modal { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-md); width: 490px; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
 .git-modal-lg { width: 702px; height: 560px; }
+.git-modal-settings { width: 600px; }
 .git-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .git-modal-title { font-size: 14px; font-weight: 700; color: var(--text); }
 .git-modal-close { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 20px; line-height: 1; padding: 0 4px; transition: color .12s; }
 .git-modal-close:hover { color: var(--text); }
-.git-modal-body { padding: 14px 18px; overflow-y: hidden; flex: 1; display: flex; flex-direction: column; }
+.git-modal-body { padding: 14px 18px; overflow-y: hidden; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .git-test-btn { gap: 6px; }
 .git-modal-footer { padding: 10px 18px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-shrink: 0; }
 .git-test-results { padding: 8px 18px; border-top: 1px solid var(--border); background: var(--bg-alt); display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
@@ -695,15 +696,21 @@ pre.blv-pre {
 
 /* ── Jira Bar ─────────────────────────────── */
 .jira-bar { display: flex; align-items: center; gap: 8px; padding: 4px 16px; border-bottom: 1px solid var(--border); background: var(--bg-alt); flex-shrink: 0; flex-wrap: wrap; min-height: 34px; }
-.jira-bar-label { font-size: 10px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
+.jira-bar-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 3px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text-2); cursor: pointer; white-space: nowrap; }
+.jira-bar-btn:hover { background: var(--bg-alt); color: var(--text); }
+.jira-bar-btn-count { background: var(--primary-bg); color: var(--primary); border-radius: 10px; font-size: 10px; font-weight: 700; padding: 0 5px; line-height: 1.5; }
 .jira-chips { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
 .jira-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--primary); background: var(--primary-bg); padding: 1px 6px 1px 8px; border-radius: 12px; text-decoration: none; border: 1px solid #BFDBFE; line-height: 1.6; }
 .jira-chip:hover { background: #DBEAFE; }
 .jira-chip-del { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 13px; line-height: 1; padding: 0; margin-left: 1px; }
 .jira-chip-del:hover { color: var(--error); }
-.jira-input-wrap { display: flex; align-items: center; gap: 4px; margin-left: auto; }
-.jira-input { font-size: 12px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); width: 290px; }
-.jira-input:focus { outline: none; border-color: var(--primary); }
+.report-name-wrap { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.report-name-label { font-size: 10px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
+.report-name-input { font-size: 12px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); width: 220px; }
+.report-name-input:focus { outline: none; border-color: var(--primary); }
+.report-name-input.input-error { border-color: var(--error); }
+.report-name-tag { display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; color: var(--primary); background: var(--primary-bg); padding: 2px 10px; border-radius: 12px; border: 1px solid #BFDBFE; cursor: pointer; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.report-name-tag:hover { background: #DBEAFE; }
 /* Dark theme contrast fixes (Lighthouse color-contrast ≥4.5:1) */
 [data-theme="dark"] .btn-success { background: #047857; border-color: #047857; }
 [data-theme="dark"] .btn-success:hover { background: #065f46; border-color: #065f46; }
@@ -753,44 +760,89 @@ pre.blv-pre {
         </button>
       </div>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="saveExecution()">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13 11.5V13a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1h6.5L13 4.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 2v3H6V2M6 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      Save
-    </button>
-    <button class="btn btn-ghost btn-sm" onclick="saveExecutionAs()">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 7l3 3 3-3M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Save As…
-    </button>
+    <div class="split-btn" id="saveSplitBtn">
+      <button class="btn btn-ghost btn-sm split-btn-main" onclick="saveExecution()">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13 11.5V13a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1h6.5L13 4.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 2v3H6V2M6 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Save
+      </button>
+      <button class="btn btn-ghost btn-sm split-btn-arrow" onclick="toggleSaveDropdown(event)" title="More save options">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="split-dropdown" id="saveDropdown">
+        <button class="split-dropdown-item" onclick="saveExecution(); closeSaveDropdown()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="margin-right:4px"><path d="M13 11.5V13a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1h6.5L13 4.5z" stroke="currentColor" stroke-width="1.5"/><path d="M10 2v3H6V2M6 9h4" stroke="currentColor" stroke-width="1.5"/></svg>
+          Save
+        </button>
+        <button class="split-dropdown-item" onclick="saveExecutionAs(); closeSaveDropdown()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="margin-right:4px"><path d="M8 2v8M5 7l3 3 3-3M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.5"/></svg>
+          Save As…
+        </button>
+      </div>
+    </div>
     <div class="topbar-sep"></div>
     <button class="btn btn-ghost btn-sm" onclick="exportDataset()">
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 7l3 3 3-3M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Export Dataset
     </button>
-    <button class="btn btn-success btn-sm" onclick="generateReport()">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4M5 12h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      Generate Report
-    </button>
+    <div class="split-btn" id="gitSyncSplitBtn">
+      <button class="btn btn-success btn-sm split-btn-main" id="gitSyncBtn" onclick="showGitSyncModal()" style="opacity:0.45;" disabled title="Publish to GitHub">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Git Sync
+      </button>
+      <button class="btn btn-success btn-sm split-btn-arrow" onclick="toggleGenDropdown(event)" title="More options">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="split-dropdown" id="genDropdown">
+        <button class="split-dropdown-item" onclick="generateReport(); closeGenDropdown()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="margin-right:4px"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4M5 12h3" stroke="currentColor" stroke-width="1.5"/></svg>
+          Generate Report
+        </button>
+        <button class="split-dropdown-item" id="gitSyncDropdownItem" onclick="showGitSyncModal(); closeGenDropdown()" style="opacity:0.45;" disabled title="Publish to GitHub">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Git Sync
+        </button>
+      </div>
+    </div>
     <div class="topbar-sep"></div>
-    <!-- Git Sync button — visible only when Git is configured -->
-    <button class="btn btn-ghost btn-sm" id="gitSyncBtn" onclick="showGitSyncModal()" style="display:none;" title="Publish to GitHub">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      Git Sync
-    </button>
     <!-- Settings button — always visible -->
     <button class="btn btn-ghost btn-sm" onclick="showGitSettingsModal()" title="Settings">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
       Settings
+    </button>
+    <button class="btn btn-ghost btn-sm" onclick="resetAllData()" title="Reset test cases, Jira tickets and report name">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
+      Reset
     </button>
   </div>
 </div>
 
 <!-- Jira Tickets Bar -->
 <div class="jira-bar" id="jiraBar">
-  <span class="jira-bar-label">Jira Tickets</span>
+  <button class="jira-bar-btn" onclick="showJiraModal()" title="Manage Jira tickets">
+    Jira <span class="jira-bar-btn-count" id="jiraBarCount" style="display:none">0</span>
+  </button>
   <div class="jira-chips" id="jiraChips"></div>
-  <div class="jira-input-wrap">
-    <input id="jiraInput" class="jira-input" type="url" placeholder="https://jira.company.com/browse/PROJ-123" aria-label="JIRA ticket URL" onkeydown="if(event.key==='Enter')addJiraTicket()">
-    <button class="btn btn-ghost btn-xs" onclick="addJiraTicket()">+ Add</button>
+  <div class="report-name-wrap">
+    <label class="report-name-label" for="reportNameInput">Report Name</label>
+    <input id="reportNameInput" class="report-name-input" type="text" placeholder="required for Git publish — press Enter" aria-label="Report / execution name" onkeydown="onReportNameKeydown(event)" onblur="onReportNameBlur()">
+    <span id="reportNameTag" class="report-name-tag" onclick="editReportName()" title="Click to edit" style="display:none"></span>
+  </div>
+</div>
+
+<!-- Jira Ticket Modal -->
+<div class="git-modal-overlay" id="jiraModalOverlay" onclick="closeJiraModalOnBackdrop(event)">
+  <div class="git-modal" role="dialog" aria-modal="true" style="max-width:420px">
+    <div class="git-modal-header">
+      <span class="git-modal-title">Add Jira Ticket</span>
+      <button class="git-modal-close" onclick="closeJiraModal()">&times;</button>
+    </div>
+    <div class="git-modal-body">
+      <input id="jiraModalInput" class="report-name-input" style="width:100%" type="url" placeholder="https://jira.company.com/browse/PROJ-123" aria-label="JIRA ticket URL" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmJiraModal();}">
+    </div>
+    <div class="git-modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeJiraModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmJiraModal()">OK</button>
+    </div>
   </div>
 </div>
 
@@ -1081,7 +1133,7 @@ pre.blv-pre {
 
 <!-- ── Git Settings Modal ─────────────────────────────── -->
 <div class="git-modal-overlay" id="gitSettingsOverlay" onclick="closeGitSettingsOnBackdrop(event)">
-  <div class="git-modal" role="dialog" aria-modal="true">
+  <div class="git-modal git-modal-settings" role="dialog" aria-modal="true">
     <div class="git-modal-header">
       <span class="git-modal-title">⚙ Settings</span>
       <button class="git-modal-close" onclick="closeGitSettings()">&times;</button>
@@ -1148,12 +1200,45 @@ pre.blv-pre {
         </div>
       </div>
       </div><!-- #gs-tab-git -->
-      <div id="gs-tab-project" style="display:none">
+      <div id="gs-tab-project" style="display:none;overflow-y:auto;flex:1;min-height:0;">
         <div class="git-section-sep">Proxy / Auth</div>
         <div class="git-field">
           <label for="gs-auth-skip-hosts">Auth skip hosts</label>
           <input class="git-input mono" id="gs-auth-skip-hosts" type="text" placeholder="login.microsoftonline.com" spellcheck="false">
           <div style="font-size:10px;color:var(--text-3);margin-top:2px;line-height:1.3">Comma-separated. Companion skips capturing requests to these hosts. Sent to companion on every Connect.</div>
+        </div>
+        <div class="git-section-sep">Path Parsing — Companion</div>
+        <div class="git-field">
+          <label for="gs-url-pattern">URL parse regex <span style="font-weight:400;color:var(--text-3)">(named groups: <code>?&lt;appName&gt;</code> optional, <code>?&lt;apiPath&gt;</code> required)</span></label>
+          <input class="git-input mono" id="gs-url-pattern" type="text" spellcheck="false" oninput="gsValidateUrlPattern()" placeholder="(?&lt;appName&gt;[^/]+)\/(?:[^/]+\/)?api\/v\d+\/(?&lt;apiPath&gt;.+)">
+          <div id="gs-url-pattern-err" style="font-size:10px;color:#ef4444;margin-top:2px;display:none">Invalid regex</div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:2px;line-height:1.3">Sent to companion on Connect. No match → fallback to full path.</div>
+        </div>
+        <div class="git-field">
+          <label for="gs-env-suffixes">Env suffixes <span style="font-weight:400;color:var(--text-3)">(stripped from appName tail)</span></label>
+          <input class="git-input mono" id="gs-env-suffixes" type="text" placeholder="qa, dev, prod, int, test, staging, stg" spellcheck="false">
+          <div style="font-size:10px;color:var(--text-3);margin-top:2px;line-height:1.3">Comma-separated. Sent to companion on every Connect.</div>
+        </div>
+        <div class="git-section-sep">Path Parsing — Builder</div>
+        <div class="git-field">
+          <label>Segment rules <span style="font-weight:400;color:var(--text-3)">(applied in order; first match wins; no match → lowercase as-is)</span></label>
+          <div id="gs-segment-rules-table" style="margin-top:4px;border:1px solid var(--border);border-radius:4px;overflow:hidden">
+            <div style="display:grid;grid-template-columns:1fr 120px 60px;font-size:11px;font-weight:600;color:var(--text-3);padding:4px 8px;background:var(--bg-alt);border-bottom:1px solid var(--border)">
+              <span>Pattern (regex)</span><span>Replacement</span><span></span>
+            </div>
+            <div id="gs-segment-rules-rows"></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="gsAddSegmentRule()" style="margin-top:6px;font-size:11px">+ Add rule</button>
+        </div>
+        <div class="git-section-sep">Preview</div>
+        <div class="git-field">
+          <label for="gs-preview-url">Test URL</label>
+          <input class="git-input mono" id="gs-preview-url" type="text" placeholder="https://host/app-dev/api/v1/users/123" spellcheck="false" oninput="gsUpdatePreview()">
+          <div id="gs-preview-result" style="margin-top:6px;font-size:11px;font-family:monospace;line-height:1.8;display:none">
+            <div><span style="color:var(--text-3)">appName  →</span> <span id="gs-prev-app" style="color:var(--text-1)"></span></div>
+            <div><span style="color:var(--text-3)">api_path →</span> <span id="gs-prev-path" style="color:var(--text-1)"></span></div>
+            <div><span style="color:var(--text-3)">normalized→</span> <span id="gs-prev-norm" style="color:var(--text-1)"></span></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1192,6 +1277,7 @@ pre.blv-pre {
       <button class="git-modal-close" onclick="closeGitSync()">&times;</button>
     </div>
     <div class="git-modal-body">
+      <div id="sync-name-warn" class="sync-artifact-warn" style="display:none;margin-bottom:12px;">⚠ Report Name is required before publishing. Close this dialog and fill in the "Report Name" field in the top bar.</div>
       <div style="font-size:12px;color:var(--text-2);margin-bottom:12px;">Select artifacts to publish:</div>
       <div class="sync-artifact-row">
         <input type="checkbox" class="sync-artifact-check" id="sync-check-report" aria-label="Include report file">
@@ -1310,6 +1396,45 @@ let activeEditorTab = 'form'; // 'form' | 'logview'
 let blvActiveLogIdx = -1;
 let blvContentCache = {};
 let blvParsedEntries = [];
+
+// ═══════════════════════════════════════════════════════════
+//  AUTOSAVE (persist in-progress work across page refresh)
+// ═══════════════════════════════════════════════════════════
+function persistAutosave() {
+  try {
+    localStorage.setItem('trb-autosave-data', JSON.stringify({
+      data, activeIdx, currentFileType, gitFilePath
+    }));
+  } catch {
+    // Storage full/unavailable — autosave is best-effort, never block the UI
+  }
+}
+
+function restoreAutosave() {
+  try {
+    const raw = localStorage.getItem('trb-autosave-data');
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.data)) {
+      localStorage.removeItem('trb-autosave-data');
+      return;
+    }
+    data = parsed.data;
+    activeIdx = (typeof parsed.activeIdx === 'number' && parsed.activeIdx >= 0 && parsed.activeIdx < data.length)
+      ? parsed.activeIdx : null;
+    currentFileType = parsed.currentFileType || null;
+    gitFilePath = parsed.gitFilePath || null;
+
+    renderList();
+    if (activeIdx !== null) {
+      selectTest(activeIdx);
+    } else {
+      resetEditorState();
+    }
+  } catch {
+    localStorage.removeItem('trb-autosave-data');
+  }
+}
 
 // ═══════════════════════════════════════════════════════════
 //  UTILS
@@ -1520,6 +1645,7 @@ function saveActiveToData() {
   tc.executionComments       = document.getElementById('f-executionComments').value.substring(0, 700);
   // log stays in tc.log (managed separately)
   // executionCommentsImages managed separately via renderCommentImages
+  persistAutosave();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1547,6 +1673,7 @@ function markUnsaved() {
     document.getElementById('editorBreadcrumb').innerHTML = `<strong>${escHtml(name || 'Unnamed')}</strong>`;
     updateActiveListItem();
   }
+  persistAutosave();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1686,6 +1813,7 @@ function addTestCase() {
   if (unsaved && activeIdx !== null) saveActiveToData();
   data.push({ testCaseName:'New Test Case', method:'GET', api_path:'', appName:'', payload_string:'', response_string:'', actual_response_string:'', response_status:'200', ignoredFields:'CorrelationId, Timestamp', result:'', actual_status:'', log: null, executionComments: '', executionCommentsImages: [] });
   selectTest(data.length - 1);
+  persistAutosave();
 }
 
 function duplicateTest(i) {
@@ -1695,6 +1823,7 @@ function duplicateTest(i) {
   data.splice(i + 1, 0, copy);
   selectTest(i + 1);
   showToast('Duplicated ✓', 'success');
+  persistAutosave();
 }
 
 function deleteTest(i) {
@@ -1712,6 +1841,7 @@ function deleteTest(i) {
     selectTest(activeIdx);
   }
   showToast('Deleted', '');
+  persistAutosave();
 }
 
 function duplicateCurrent() { if (activeIdx !== null) duplicateTest(activeIdx); }
@@ -1759,6 +1889,35 @@ function resetEditorState() {
   document.getElementById('editorBreadcrumb').innerHTML = '← Select a test case';
 }
 
+// ═══════════════════════════════════════════════════════════
+//  RESET ALL (test cases + Jira tickets + report name)
+// ═══════════════════════════════════════════════════════════
+function resetAllData() {
+  if (!confirm('Reset all test cases, Jira tickets, and report name? This cannot be undone.')) return;
+
+  data = [];
+  activeIdx = null;
+  unsaved = false;
+  currentFileType = null;
+  gitFilePath = null;
+  executionFileHandle = null;
+  document.getElementById('unsavedDot').classList.remove('visible');
+
+  saveJiraTickets([]);
+  renderJiraChips();
+
+  saveReportName('');
+  renderReportNameInput();
+
+  localStorage.removeItem('trb-autosave-data');
+
+  updateFilePill(null);
+  resetEditorState();
+  renderList();
+
+  showToast('Reset ✓', 'success');
+}
+
 // Shared post-read logic for both the File System Access API path and the
 // legacy <input type="file"> fallback. `handle` is the FileSystemFileHandle
 // when available (Chromium) so in-place saves work; null otherwise.
@@ -1771,6 +1930,8 @@ function loadParsedFile(text, fileName, handle) {
     currentFileType = 'execution';
     saveJiraTickets(Array.isArray(parsed.jiraTickets) ? parsed.jiraTickets : []);
     renderJiraChips();
+    saveReportName(parsed.reportName || '');
+    renderReportNameInput();
     data = (parsed.tests || []).map(tc => ({ ...tc, log: tc.log || null }));
     gitFilePath = null;
     resetEditorState();
@@ -1778,6 +1939,7 @@ function loadParsedFile(text, fileName, handle) {
     updateFilePill(fileName, 'execution');
     if (data.length > 0) selectTest(0, true);
     showToast(`Opened execution: ${fileName}`, 'success');
+    persistAutosave();
     return;
   }
 
@@ -1791,6 +1953,8 @@ function loadParsedFile(text, fileName, handle) {
     executionFileHandle = handle || null;
     saveJiraTickets([]);
     renderJiraChips();
+    saveReportName('');
+    renderReportNameInput();
     data = parsed.map(tc => ({ ...tc, log: tc.log || null }));
   } else {
     // Dataset: seed DDT fields, blank result/log fields
@@ -1817,6 +1981,7 @@ function loadParsedFile(text, fileName, handle) {
   updateFilePill(fileName, type);
   if (data.length > 0) selectTest(0, true);
   showToast(`Opened ${type}: ${fileName}`, 'success');
+  persistAutosave();
 }
 
 async function openFile() {
@@ -1856,6 +2021,7 @@ function buildExecution() {
     _type: 'execution-bundle',
     _schema: '3.0',
     jiraTickets: getJiraTickets(),
+    reportName: getReportName(),
     tests: data.map(tc => ({ ...tc, _type: 'execution', _schema: '2.1' })),
   };
 }
@@ -1953,7 +2119,7 @@ function generateReport() {
   if (blob.size > 5 * 1024 * 1024) showToast(`Large report (${fmtBytes(blob.size)}) — many images/logs`, '');
   const url  = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'report.html'; a.click();
+  a.href = url; a.download = buildReportFilename(); a.click();
   URL.revokeObjectURL(url);
   showToast('Report generated ✓', 'success');
 }
@@ -1963,6 +2129,7 @@ function generateReport() {
 // ═══════════════════════════════════════════════════════════
 function buildReportHTML(tests, shareUrl = '') {
   const now   = new Date().toLocaleString();
+  const reportName = getReportName();
   const total  = tests.length;
   const passed = tests.filter(t => t.result === 'passed').length;
   const failed = tests.filter(t => t.result === 'failed').length;
@@ -2071,7 +2238,7 @@ function buildReportHTML(tests, shareUrl = '') {
 
   // Sidebar items for detail view
   const sidebarItems = tests.map((tc, i) => `
-    <div class="test-item-r ${tc.result||''}" id="ri-${i}" onclick="selectDetailTest(${i})">
+    <div class="test-item-r ${tc.result||''}" id="ri-${i}" data-status="${esc(tc.result||'')}" onclick="selectDetailTest(${i})">
       <div class="test-dot-r ${tc.result||''}"></div>
       <div class="test-item-r-info">
         <div class="test-item-r-name">${esc(tc.testCaseName||'Unnamed')}</div>
@@ -2084,7 +2251,7 @@ function buildReportHTML(tests, shareUrl = '') {
 
   // Dashboard table rows
   const tableRows = tests.map(tc => `
-    <tr class="${tc.result === 'failed' ? 'row-failed' : ''}">
+    <tr class="${tc.result === 'failed' ? 'row-failed' : ''}" data-status="${esc(tc.result||'')}">
       <td>${esc(tc.testCaseName||'Unnamed')}</td>
       <td><span class="method-badge badge-${(tc.method||'get').toLowerCase()}">${esc(tc.method||'GET')}</span></td>
       <td>${tc.api_path ? `<code>${esc(tc.api_path)}</code>` : '<span class="text-muted">&mdash;</span>'}</td>
@@ -2105,7 +2272,7 @@ function buildReportHTML(tests, shareUrl = '') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Test Report &mdash; ${esc(now)}</title>
+<title>${reportName ? esc(reportName) + ' &mdash; ' : ''}Test Report &mdash; ${esc(now)}</title>
 <meta name="trb-count-passed"  content="${passed}">
 <meta name="trb-count-failed"  content="${failed}">
 <meta name="trb-count-skipped" content="${skipped}">
@@ -2141,8 +2308,11 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-seri
 .tab.active{color:var(--primary);border-bottom-color:var(--primary)}
 /* Stat cards */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
-.executor-info{padding:8px 20px;font-size:13px;color:var(--text-muted,#6B7280);border-bottom:1px solid var(--border);flex-shrink:0}.executor-info-label{font-weight:600;margin-right:4px}
-.stat{background:var(--bg-alt);border-radius:var(--r-sm);padding:12px 16px;text-align:center}
+.executor-info{position:relative;display:flex;align-items:center;padding:12px 20px;font-size:13px;color:var(--text-muted,#6B7280);border-bottom:1px solid var(--border);flex-shrink:0;gap:20px}.executor-info-label{font-weight:600;margin-right:4px}
+.report-name-in-info{position:absolute;left:50%;transform:translateX(-50%);font-size:20px;font-weight:700;color:#000;top:50%;transform:translate(-50%,-50%)}
+.stat{background:var(--bg-alt);border-radius:var(--r-sm);padding:12px 16px;text-align:center;cursor:pointer;border:1.5px solid transparent;transition:border-color .12s,background .12s}
+.stat:hover{background:#EAECEF}
+.stat.active{border-color:var(--primary)}
 .stat-val{font-size:24px;font-weight:700}
 .stat-label{font-size:11px;color:var(--text-3);margin-top:2px}
 .stat.passed .stat-val{color:var(--success)}
@@ -2308,12 +2478,12 @@ ${jiraTickets.length ? `
 </div>` : ''}
 
 <!-- Stats always visible -->
-${executor ? `<div class="executor-info"><span class="executor-info-label">Reporter:</span> <span class="executor-info-val">${esc(executor)}</span></div>` : ''}
+${executor || reportName ? `<div class="executor-info">${executor ? `<span class="executor-info-label">Reporter:</span> <span class="executor-info-val">${esc(executor)}</span>` : ''}${reportName ? `<span class="report-name-in-info">${esc(reportName)}</span>` : ''}</div>` : ''}
 <div class="stats">
-  <div class="stat"><div class="stat-val">${total}</div><div class="stat-label">Total</div></div>
-  <div class="stat passed"><div class="stat-val">${passed}</div><div class="stat-label">Passed</div></div>
-  <div class="stat failed"><div class="stat-val">${failed}</div><div class="stat-label">Failed</div></div>
-  <div class="stat skipped"><div class="stat-val">${skipped}</div><div class="stat-label">Skipped</div></div>
+  <div class="stat" id="stat-all" onclick="filterByStatus('')"><div class="stat-val">${total}</div><div class="stat-label">Total</div></div>
+  <div class="stat passed" id="stat-passed" onclick="filterByStatus('passed')"><div class="stat-val">${passed}</div><div class="stat-label">Passed</div></div>
+  <div class="stat failed" id="stat-failed" onclick="filterByStatus('failed')"><div class="stat-val">${failed}</div><div class="stat-label">Failed</div></div>
+  <div class="stat skipped" id="stat-skipped" onclick="filterByStatus('skipped')"><div class="stat-val">${skipped}</div><div class="stat-label">Skipped</div></div>
 </div>
 
 <!-- Dashboard -->
@@ -2378,6 +2548,23 @@ function switchTab(t){
   document.getElementById('page-detail').style.display    = t==='detail'    ? 'flex' : 'none';
   document.getElementById('tab-dashboard').classList.toggle('active', t==='dashboard');
   document.getElementById('tab-detail').classList.toggle('active', t==='detail');
+}
+
+var activeStatusFilter = '';
+function filterByStatus(status){
+  activeStatusFilter = (activeStatusFilter === status) ? '' : status;
+  ['stat-all','stat-passed','stat-failed','stat-skipped'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    var elStatus = id === 'stat-all' ? '' : id.replace('stat-','');
+    el.classList.toggle('active', activeStatusFilter === elStatus);
+  });
+  document.querySelectorAll('#page-dashboard tbody tr').forEach(function(row){
+    row.style.display = (!activeStatusFilter || row.dataset.status === activeStatusFilter) ? '' : 'none';
+  });
+  document.querySelectorAll('.test-item-r').forEach(function(item){
+    item.style.display = (!activeStatusFilter || item.dataset.status === activeStatusFilter) ? '' : 'none';
+  });
 }
 
 function selectDetailTest(i){
@@ -2861,7 +3048,11 @@ async function proxyConnect() {
     fetch(PROXY_API + '/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ authSkipHosts: skipHosts }),
+      body: JSON.stringify({
+        authSkipHosts:   skipHosts,
+        urlParsePattern: localStorage.getItem('trb-path-url-pattern') || '(?<appName>[^/]+)\\/(?:[^/]+\\/)?api\\/v\\d+\\/(?<apiPath>.+)',
+        envSuffixes:     (localStorage.getItem('trb-path-env-suffixes') || 'qa,dev,prod,int,test,staging,stg').split(',').map(function(s) { return s.trim(); }).filter(Boolean),
+      }),
     }).catch(() => {});
   } catch {}
 
@@ -2938,6 +3129,7 @@ async function proxyClear() {
   resetEditorState();
   renderList();
   updateCapturedBadge();
+  persistAutosave();
 
   showToast(companionCleared ? 'All tests cleared ✓' : 'Builder cleared ✓ (companion offline)', 'success');
 }
@@ -2975,7 +3167,8 @@ function ingestCapturedTestCase(tc) {
 
   // Auto-select first captured
   if (data.length === 1) selectTest(0, true);
-  
+  persistAutosave();
+
   showToast(`Captured: ${cleanTc.method} ${cleanTc.api_path} → ${cleanTc.actual_status}`, 'success');
 
   markUnsaved();
@@ -3095,10 +3288,16 @@ function updateLastCapture(isoStr) {
 //  GIT — UI HELPERS
 // ═══════════════════════════════════════════════════════════
 function updateGitUI() {
-  const configured = !!(localStorage.getItem('trb-git-repo') && sessionId);
-  document.getElementById('gitSyncBtn').style.display = configured ? '' : 'none';
+  const hasConfig = !!(localStorage.getItem('trb-git-repo') && sessionId);
+  const btn = document.getElementById('gitSyncBtn');
+  btn.style.display = '';
+  const active = hasConfig && sessionVerified;
+  btn.disabled      = !active;
+  btn.style.opacity = active ? '' : '0.45';
   const ofgItem = document.getElementById('openFromGitItem');
-  if (ofgItem) ofgItem.disabled = !configured;
+  if (ofgItem) ofgItem.disabled = !active;
+  const gitSyncItem = document.getElementById('gitSyncDropdownItem');
+  if (gitSyncItem) { gitSyncItem.disabled = !active; gitSyncItem.style.opacity = active ? '' : '0.45'; }
   gsUpdateAuthUI();
 }
 
@@ -3115,6 +3314,36 @@ function toggleOpenDropdown(e) {
 function closeOpenDropdown() {
   openDropdownOpen = false;
   document.getElementById('openDropdown').classList.remove('open');
+}
+
+// ── Split-button (Save ▾) ──
+let saveDropdownOpen = false;
+function toggleSaveDropdown(e) {
+  e.stopPropagation();
+  saveDropdownOpen = !saveDropdownOpen;
+  document.getElementById('saveDropdown').classList.toggle('open', saveDropdownOpen);
+  if (saveDropdownOpen) {
+    setTimeout(() => document.addEventListener('click', closeSaveDropdown, { once: true }), 0);
+  }
+}
+function closeSaveDropdown() {
+  saveDropdownOpen = false;
+  document.getElementById('saveDropdown').classList.remove('open');
+}
+
+// ── Split-button (Generate/Git Sync ▾) ──
+let genDropdownOpen = false;
+function toggleGenDropdown(e) {
+  e.stopPropagation();
+  genDropdownOpen = !genDropdownOpen;
+  document.getElementById('genDropdown').classList.toggle('open', genDropdownOpen);
+  if (genDropdownOpen) {
+    setTimeout(() => document.addEventListener('click', closeGenDropdown, { once: true }), 0);
+  }
+}
+function closeGenDropdown() {
+  genDropdownOpen = false;
+  document.getElementById('genDropdown').classList.remove('open');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3134,6 +3363,116 @@ function closeGitSettings() {
 function closeGitSettingsOnBackdrop(e) {
   if (e.target === document.getElementById('gitSettingsOverlay')) closeGitSettings();
 }
+function gsValidateUrlPattern() {
+  var val = (document.getElementById('gs-url-pattern').value || '').trim();
+  var err = document.getElementById('gs-url-pattern-err');
+  var inp = document.getElementById('gs-url-pattern');
+  if (!val) { inp.style.borderColor = ''; err.style.display = 'none'; return true; }
+  try { new RegExp(val); inp.style.borderColor = ''; err.style.display = 'none'; return true; }
+  catch (e) { inp.style.borderColor = '#ef4444'; err.style.display = ''; return false; }
+}
+
+function gsRenderSegmentRules(rules) {
+  var container = document.getElementById('gs-segment-rules-rows');
+  if (!container) return;
+  container.innerHTML = '';
+  rules.forEach(function(r, i) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 120px 60px;align-items:center;border-bottom:1px solid var(--border);';
+    row.dataset.index = i;
+    row.innerHTML =
+      '<input class="git-input mono" style="border:none;border-right:1px solid var(--border);border-radius:0;font-size:11px;padding:4px 6px" value="' + escHtml(r.pattern) + '" oninput="gsSegmentRuleChange(' + i + ',\'pattern\',this.value)">' +
+      '<input class="git-input mono" style="border:none;border-right:1px solid var(--border);border-radius:0;font-size:11px;padding:4px 6px" value="' + escHtml(r.replacement) + '" oninput="gsSegmentRuleChange(' + i + ',\'replacement\',this.value)">' +
+      '<div style="display:flex;justify-content:center;gap:2px;padding:2px">' +
+        '<button class="btn btn-ghost" style="padding:1px 4px;font-size:10px" onclick="gsSegmentRuleMove(' + i + ',-1)" title="Up">↑</button>' +
+        '<button class="btn btn-ghost" style="padding:1px 4px;font-size:10px" onclick="gsSegmentRuleMove(' + i + ',1)" title="Down">↓</button>' +
+        '<button class="btn btn-ghost" style="padding:1px 4px;font-size:10px;color:#ef4444" onclick="gsSegmentRuleDelete(' + i + ')" title="Remove">×</button>' +
+      '</div>';
+    container.appendChild(row);
+  });
+}
+
+var _gsRules = [];
+
+function gsLoadSegmentRules() {
+  try { _gsRules = JSON.parse(localStorage.getItem('trb-segment-rules') || 'null') || [{ pattern: '^\\d+$', replacement: '{id}' }, { pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', flags: 'i', replacement: '{id}' }]; }
+  catch (e) { _gsRules = [{ pattern: '^\\d+$', replacement: '{id}' }, { pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', flags: 'i', replacement: '{id}' }]; }
+  gsRenderSegmentRules(_gsRules);
+}
+
+function gsSegmentRuleChange(idx, field, val) {
+  if (_gsRules[idx]) { _gsRules[idx][field] = val; gsUpdatePreview(); }
+}
+
+function gsSegmentRuleMove(idx, dir) {
+  var to = idx + dir;
+  if (to < 0 || to >= _gsRules.length) return;
+  var tmp = _gsRules[idx]; _gsRules[idx] = _gsRules[to]; _gsRules[to] = tmp;
+  gsRenderSegmentRules(_gsRules); gsUpdatePreview();
+}
+
+function gsSegmentRuleDelete(idx) {
+  _gsRules.splice(idx, 1);
+  gsRenderSegmentRules(_gsRules); gsUpdatePreview();
+}
+
+function gsAddSegmentRule() {
+  _gsRules.push({ pattern: '', replacement: '{id}' });
+  gsRenderSegmentRules(_gsRules);
+}
+
+function gsUpdatePreview() {
+  var urlStr = (document.getElementById('gs-preview-url') || {}).value || '';
+  var result = document.getElementById('gs-preview-result');
+  if (!result) return;
+  if (!urlStr.trim()) { result.style.display = 'none'; return; }
+  result.style.display = '';
+  // Parse URL
+  var appName = '', apiPath = '';
+  try {
+    var parsed = new URL(urlStr.trim());
+    var pathname = parsed.pathname || '';
+    var search = parsed.search || '';
+    var pattern = (document.getElementById('gs-url-pattern').value || '').trim() ||
+      '(?<appName>[^/]+)\\/(?:[^/]+\\/)?api\\/v\\d+\\/(?<apiPath>.+)';
+    var rx = new RegExp(pattern);
+    var m = pathname.match(rx);
+    if (m && m.groups && m.groups.apiPath) {
+      var rawApp = m.groups.appName || '';
+      // strip env suffix
+      var suffixes = new Set((document.getElementById('gs-env-suffixes').value || 'qa,dev,prod,int,test,staging,stg').split(',').map(function(s){ return s.trim(); }).filter(Boolean));
+      if (rawApp) {
+        var lastDash = rawApp.lastIndexOf('-');
+        if (lastDash !== -1 && suffixes.has(rawApp.substring(lastDash + 1))) rawApp = rawApp.substring(0, lastDash);
+      }
+      appName = rawApp;
+      apiPath = m.groups.apiPath.replace(/^\//, '') + search;
+    } else {
+      appName = parsed.hostname || '';
+      apiPath = pathname + search;
+    }
+  } catch (e) {
+    appName = '(invalid URL or regex)';
+    apiPath = '';
+  }
+  // Normalize using current rules
+  var normalized = '';
+  try {
+    var rules = _gsRules.filter(function(r){ return r.pattern; });
+    normalized = (apiPath || '').split('?')[0].split('/').map(function(seg) {
+      if (!seg) return '';
+      for (var i = 0; i < rules.length; i++) {
+        var r = rules[i];
+        if (new RegExp(r.pattern, r.flags || '').test(seg)) return r.replacement;
+      }
+      return seg.toLowerCase();
+    }).join('/');
+  } catch (e) { normalized = '(regex error)'; }
+  document.getElementById('gs-prev-app').textContent  = appName  || '(empty)';
+  document.getElementById('gs-prev-path').textContent = apiPath  || '(empty)';
+  document.getElementById('gs-prev-norm').textContent = normalized || '(empty)';
+}
+
 let gsActiveTab = 'git';
 function switchGsTab(tab) {
   gsActiveTab = tab;
@@ -3155,6 +3494,10 @@ function loadGitSettings() {
   document.getElementById('gs-author-name').value  = localStorage.getItem('trb-git-author-name')  || 'TestReport Builder';
   document.getElementById('gs-author-email').value    = localStorage.getItem('trb-git-author-email')        || 'builder@local';
   document.getElementById('gs-auth-skip-hosts').value = localStorage.getItem('trb-project-auth-skip-hosts') || 'login.microsoftonline.com';
+  document.getElementById('gs-url-pattern').value  = localStorage.getItem('trb-path-url-pattern')  || '';
+  document.getElementById('gs-env-suffixes').value = localStorage.getItem('trb-path-env-suffixes') || 'qa, dev, prod, int, test, staging, stg';
+  gsValidateUrlPattern();
+  gsLoadSegmentRules();
   gsUpdateAuthUI();
 }
 function saveGitSettings() {
@@ -3163,6 +3506,15 @@ function saveGitSettings() {
   if (gsActiveTab === 'git') {
     if (!repo) { showToast('Repository is required', 'error'); return; }
   }
+
+  if (!gsValidateUrlPattern()) { showToast('Invalid URL parse regex', 'error'); return; }
+  var urlPattern = document.getElementById('gs-url-pattern').value.trim();
+  var envSuffixes = document.getElementById('gs-env-suffixes').value.trim();
+  if (urlPattern) localStorage.setItem('trb-path-url-pattern', urlPattern);
+  else localStorage.removeItem('trb-path-url-pattern');
+  if (envSuffixes) localStorage.setItem('trb-path-env-suffixes', envSuffixes);
+  else localStorage.removeItem('trb-path-env-suffixes');
+  localStorage.setItem('trb-segment-rules', JSON.stringify(_gsRules));
 
   localStorage.setItem('trb-git-repo',         repo);
   localStorage.setItem('trb-git-branch',       document.getElementById('gs-branch').value.trim() || 'main');
@@ -3277,6 +3629,7 @@ function clearAuth() {
   const proxy = OAUTH_PROXY();
   const sid = sessionId;
   sessionId = null;
+  sessionVerified = false;
   localStorage.removeItem('ghv-sid');
   localStorage.removeItem('ghv-user');
   if (sid && proxy) {
@@ -3320,6 +3673,7 @@ function pollWorkerForAuth(sid, interval) {
       const data = await res.json();
       if (data.status === 'ok') {
         sessionId = sid;
+        sessionVerified = true;
         localStorage.setItem('ghv-sid', sid);
         localStorage.setItem('ghv-user', data.login || '');
         hideDeviceFlowModal();
@@ -3430,33 +3784,40 @@ function slugify(s) {
     .toLowerCase();
 }
 
-// Returns true if a URL path segment looks like a resource ID:
-// — only digits, OR
-// — UUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx), OR
-// — alphanumeric+dashes with more than one digit character after stripping dashes
-function isApiIdSegment(seg) {
-  if (!seg) return false;
-  if (/^\d+$/.test(seg)) return true;
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(seg)) return true;
-  const stripped = seg.replace(/-/g, '');
-  if (/^[a-zA-Z0-9]+$/.test(stripped) && (stripped.match(/\d/g) || []).length > 1) return true;
-  return false;
+const DEFAULT_SEGMENT_RULES = [
+  { pattern: '^\\d+$', replacement: '{id}' },
+  { pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', flags: 'i', replacement: '{id}' },
+];
+
+function getSegmentRules() {
+  try { return JSON.parse(localStorage.getItem('trb-segment-rules') || 'null') || DEFAULT_SEGMENT_RULES; }
+  catch (e) { return DEFAULT_SEGMENT_RULES; }
 }
 
-// Normalizes an API path for use as a directory path:
-// replaces ID-like segments with {id}, preserves directory structure
-function normalizeApiPath(apiPath) {
-  return (apiPath || '').split('?')[0].split('/').map(seg =>
-    seg === '' ? '' : isApiIdSegment(seg) ? '{id}' : seg.toLowerCase()
-  ).join('/');
+function normalizeApiPath(apiPath, rules) {
+  var active = rules || getSegmentRules();
+  return (apiPath || '').split('?')[0].split('/').map(function(seg) {
+    if (!seg) return '';
+    for (var i = 0; i < active.length; i++) {
+      var r = active[i];
+      if (new RegExp(r.pattern, r.flags || '').test(seg)) return r.replacement;
+    }
+    return seg.toLowerCase();
+  }).join('/');
+}
+
+function buildReportFilename() {
+  const app  = slugify(data[0]?.appName || 'unknown');
+  const ts   = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
+  const name = slugify(getReportName());
+  return `${app}_${ts}${name ? '_' + name : ''}.html`;
 }
 
 function buildReportPath() {
   const root  = (localStorage.getItem('trb-git-report-root') || 'reports/').replace(/\/$/, '');
   const app   = slugify(data[0]?.appName || 'unknown');
   const month = new Date().toISOString().slice(0, 7);
-  const ts    = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
-  return `${root}/${app}/${month}/${app}_${ts}.html`;
+  return `${root}/${app}/${month}/${buildReportFilename()}`;
 }
 
 function buildExecutionPath() {
@@ -3465,7 +3826,8 @@ function buildExecutionPath() {
   const app   = slugify(data[0]?.appName || 'unknown');
   const month = new Date().toISOString().slice(0, 7);
   const ts    = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
-  return `${root}/${app}/${month}/${app}_${ts}.json`;
+  const name  = slugify(getReportName());
+  return `${root}/${app}/${month}/${app}_${ts}${name ? '_' + name : ''}.json`;
 }
 
 function buildDatasetPath() {
@@ -3590,8 +3952,11 @@ function showGitSyncModal() {
   commitMsgTouched = false;
 
   const noData = data.length === 0;
+  const noName = !getReportName().trim();
   const apis   = [...new Set(data.map(t => normalizeApiPath((t.api_path || '').split('?')[0])).filter(Boolean))];
   const multiApi = apis.length > 1;
+
+  document.getElementById('sync-name-warn').style.display = noName ? '' : 'none';
 
   // Paths
   const rPath = noData ? '—' : buildReportPath();
@@ -3616,9 +3981,9 @@ function showGitSyncModal() {
   const cReport = document.getElementById('sync-check-report');
   const cExec   = document.getElementById('sync-check-exec');
   const cDs     = document.getElementById('sync-check-ds');
-  cReport.checked = false; cReport.disabled = noData;
-  cExec.checked   = false; cExec.disabled   = noData;
-  cDs.checked     = false; cDs.disabled     = noData || multiApi || apis.length === 0;
+  cReport.checked = false; cReport.disabled = noData || noName;
+  cExec.checked   = false; cExec.disabled   = noData || noName;
+  cDs.checked     = false; cDs.disabled     = noData || noName || multiApi || apis.length === 0;
 
   // Auto-generate commit message on checkbox change (first toggle only)
   [cReport, cExec, cDs].forEach(cb => {
@@ -3683,8 +4048,9 @@ function updateSyncBtn() {
   const dsWarnVisible = document.getElementById('sync-ds-warn').style.display !== 'none';
   const dsConflict = cDs && dsWarnVisible;
   const anySelected = cReport || cExec || cDs;
+  const noName = !getReportName().trim();
   const btn = document.getElementById('gitSyncDoBtn');
-  btn.disabled = !anySelected || !msg || dsConflict;
+  btn.disabled = !anySelected || !msg || dsConflict || noName;
 }
 
 function updateSyncProgress(step, label) {
@@ -3959,6 +4325,8 @@ async function ofgOpenFile(path) {
       currentFileType = 'execution';
       saveJiraTickets(Array.isArray(parsed.jiraTickets) ? parsed.jiraTickets : []);
       renderJiraChips();
+      saveReportName(parsed.reportName || '');
+      renderReportNameInput();
       data = (parsed.tests || []).map(tc => ({ ...tc, log: tc.log || null }));
       gitFilePath = path;
       resetEditorState();
@@ -3966,6 +4334,7 @@ async function ofgOpenFile(path) {
       updateFilePill(path.split('/').pop(), 'execution');
       if (data.length > 0) selectTest(0, true);
       showToast(`Opened from Git: ${path.split('/').pop()} ✓`, 'success');
+      persistAutosave();
       return;
     }
 
@@ -3976,6 +4345,8 @@ async function ofgOpenFile(path) {
       executionFileHandle = null;
       saveJiraTickets([]);
       renderJiraChips();
+      saveReportName('');
+      renderReportNameInput();
       data = parsed.map(tc => ({ ...tc, log: tc.log || null }));
     } else {
       executionFileHandle = null;
@@ -4001,6 +4372,7 @@ async function ofgOpenFile(path) {
     updateFilePill(path.split('/').pop(), type);
     if (data.length > 0) selectTest(0, true);
     showToast(`Opened from Git: ${path.split('/').pop()} ✓`, 'success');
+    persistAutosave();
   } catch(e) {
     showToast(`Failed to open from Git: ${e.message}`, 'error');
   }
@@ -4032,6 +4404,7 @@ function saveJiraTickets(tickets) {
 
 function renderJiraChips() {
   const container = document.getElementById('jiraChips');
+  const badge = document.getElementById('jiraBarCount');
   if (!container) return;
   const tickets = getJiraTickets();
   container.innerHTML = tickets.map((url, i) => {
@@ -4040,10 +4413,33 @@ function renderJiraChips() {
     const safeLabel = String(label).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     return `<a class="jira-chip" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeLabel} &#8599;<button class="jira-chip-del" onclick="event.preventDefault();removeJiraTicket(${i})" title="Remove">&#x2715;</button></a>`;
   }).join('');
+  if (badge) {
+    badge.style.display = tickets.length ? '' : 'none';
+    badge.textContent = String(tickets.length);
+  }
 }
 
-function addJiraTicket() {
-  const input = document.getElementById('jiraInput');
+function showJiraModal() {
+  document.getElementById('jiraModalInput').value = '';
+  document.getElementById('jiraModalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('jiraModalInput').focus(), 0);
+}
+
+function closeJiraModal() {
+  document.getElementById('jiraModalOverlay').classList.remove('open');
+}
+
+function closeJiraModalOnBackdrop(e) {
+  if (e.target === document.getElementById('jiraModalOverlay')) closeJiraModal();
+}
+
+function confirmJiraModal() {
+  addJiraTicket(document.getElementById('jiraModalInput'));
+  if ((document.getElementById('jiraModalInput').value || '').trim() === '') closeJiraModal();
+}
+
+function addJiraTicket(input) {
+  input = input || document.getElementById('jiraModalInput');
   const url = (input.value || '').trim();
   if (!url.startsWith('http')) { showToast('Enter a valid URL starting with http', 'error'); return; }
   const tickets = getJiraTickets();
@@ -4064,9 +4460,66 @@ function removeJiraTicket(i) {
 }
 
 // ═══════════════════════════════════════════════════════════
+//  REPORT NAME
+// ═══════════════════════════════════════════════════════════
+function getReportName() {
+  return localStorage.getItem('trb-report-name') || '';
+}
+
+function saveReportName(name) {
+  localStorage.setItem('trb-report-name', name || '');
+}
+
+function renderReportNameInput() {
+  const input = document.getElementById('reportNameInput');
+  const tag = document.getElementById('reportNameTag');
+  if (!input || !tag) return;
+  const name = getReportName();
+  if (name) {
+    input.style.display = 'none';
+    tag.style.display = '';
+    tag.textContent = name;
+  } else {
+    tag.style.display = 'none';
+    input.style.display = '';
+    input.value = '';
+  }
+}
+
+function onReportNameKeydown(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const val = e.target.value.trim();
+    if (!val) return;
+    saveReportName(val);
+    markUnsaved();
+    renderReportNameInput();
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    renderReportNameInput();
+    document.getElementById('reportNameInput').blur();
+  }
+}
+
+function onReportNameBlur() {
+  renderReportNameInput();
+}
+
+function editReportName() {
+  const input = document.getElementById('reportNameInput');
+  const tag = document.getElementById('reportNameTag');
+  tag.style.display = 'none';
+  input.style.display = '';
+  input.value = getReportName();
+  input.focus();
+  input.select();
+}
+
+// ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
 let sessionId = localStorage.getItem('ghv-sid') || null;
+let sessionVerified = false;
 function OAUTH_PROXY() { return localStorage.getItem('ghv-proxy-url') || ''; }
 
 // ═══════════════════════════════════════════════════════════
@@ -4082,24 +4535,30 @@ async function initSession() {
       });
       if (res.ok) {
         sessionId = sid;
+        sessionVerified = true;
         const data = await res.json().catch(() => ({}));
         if (data.login) localStorage.setItem('ghv-user', data.login);
       } else {
         localStorage.removeItem('ghv-sid');
         localStorage.removeItem('ghv-user');
         sessionId = null;
+        sessionVerified = false;
       }
     } catch {
       sessionId = null;
+      sessionVerified = false;
     }
   }
+  if (sid && !proxy) sessionVerified = true;
   updateGitUI();
 }
 
 (() => {
   initTheme();
-  renderList();
+  restoreAutosave();
   renderJiraChips();
+  renderReportNameInput();
+  updateGitUI();
   initSession();
 })();
 </script>

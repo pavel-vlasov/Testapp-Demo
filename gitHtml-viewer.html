@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Git HTML Viewer</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:    #ffffff;
+  --bg2:   #f7f6f3;
+  --bg3:   #eeedea;
+  --text:  #1a1a18;
+  --text2: #6b6a65;
+  --text3: #9c9a92;
+  --border:  rgba(0,0,0,0.10);
+  --border2: rgba(0,0,0,0.20);
+  --accent:      #185FA5;
+  --accent-text: #ffffff;
+  --error:   #A32D2D;
+  --warning: #854F0B;
+  --r:  8px;
+  --rl: 12px;
+  --font: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:    #1c1c1a;
+    --bg2:   #242422;
+    --bg3:   #2c2c2a;
+    --text:  #e6e4dd;
+    --text2: #9c9a92;
+    --text3: #6b6a65;
+    --border:  rgba(255,255,255,0.09);
+    --border2: rgba(255,255,255,0.17);
+    --accent:      #5B9BD5;
+    --accent-text: #ffffff;
+    --error:   #e57373;
+    --warning: #ffb74d;
+  }
+}
+
+html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.55; }
+
+.hidden { display: none !important; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 36px; padding: 0 16px;
+  border: 0.5px solid var(--border2); border-radius: var(--r);
+  background: var(--bg); color: var(--text);
+  font: 13px/1 var(--font); cursor: pointer; white-space: nowrap;
+  transition: background .13s, opacity .13s;
+}
+.btn:hover  { background: var(--bg2); }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--accent); color: var(--accent-text); border-color: transparent; height: 42px; padding: 0 22px; font-size: 14px; }
+.btn-primary:hover { opacity: .88; background: var(--accent); }
+.btn-sm { height: 30px; padding: 0 12px; font-size: 12px; }
+
+/* ── INPUT ── */
+.input {
+  height: 42px; padding: 0 14px;
+  border: 0.5px solid var(--border2); border-radius: var(--r);
+  background: var(--bg); color: var(--text);
+  font: 13px/1 var(--font); outline: none;
+  transition: border-color .15s;
+}
+.input:focus { border-color: var(--accent); }
+.input::placeholder { color: var(--text3); }
+.input-sm { height: 34px; padding: 0 10px; font-size: 12px; font-family: var(--mono); }
+
+/* ── BADGE ── */
+.badge {
+  display: inline-block; font-size: 11px; font-weight: 500;
+  padding: 2px 8px; border-radius: 20px;
+  background: var(--bg3); color: var(--text3);
+  border: 0.5px solid var(--border);
+}
+.badge-warn { background: #FAEEDA; color: #633806; }
+.badge-err  { background: #FCEBEB; color: #7A1F1F; }
+
+/* ─────────────────────────────────────────
+   LANDING — dark, blue-green
+───────────────────────────────────────── */
+
+/* Landing has its own fixed dark palette regardless of system theme */
+#landing {
+  min-height: 100vh;
+  background: #080c10;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 3rem 1.5rem; gap: 2rem;
+  position: relative; overflow: hidden;
+}
+
+/* Subtle radial glow behind the drop zone */
+#landing::before {
+  content: '';
+  position: absolute;
+  width: 600px; height: 400px;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -60%);
+  background: radial-gradient(ellipse at center,
+    rgba(0,210,150,0.07) 0%,
+    rgba(0,140,220,0.05) 45%,
+    transparent 70%);
+  pointer-events: none;
+}
+
+/* Wordmark */
+.wordmark {
+  font-size: 13px; font-weight: 500; letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.25);
+}
+.wordmark em { font-style: normal; }
+
+/* Headline */
+.landing-headline {
+  font-size: clamp(28px, 5vw, 42px);
+  font-weight: 600; letter-spacing: -.03em; line-height: 1.1;
+  text-align: center; max-width: 520px;
+  color: #ffffff;
+}
+.landing-headline span {
+  background: linear-gradient(90deg, #00d296, #00a8e8);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.tagline {
+  font-size: 13px; color: rgba(255,255,255,0.35);
+  text-align: center; max-width: 380px; line-height: 1.7;
+}
+
+/* ── DROP ZONE ── */
+.drop-zone {
+  width: 100%; max-width: 520px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 2.25rem 2rem;
+  background: rgba(255,255,255,0.03);
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+  cursor: default;
+  transition: border-color .2s, background .2s;
+  position: relative; z-index: 1;
+}
+.drop-zone.drag-over {
+  border-color: #00d296;
+  background: rgba(0,210,150,0.06);
+}
+.drop-zone.drag-over .drop-icon  { transform: scale(1.12); color: #00d296; }
+.drop-zone.drag-over .drop-label { color: #00d296; }
+
+.drop-icon {
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.2);
+  transition: transform .2s, color .2s;
+}
+.drop-icon svg { width: 38px; height: 38px; }
+
+.drop-label {
+  font-size: 14px; font-weight: 500;
+  color: rgba(255,255,255,0.6);
+  text-align: center; transition: color .2s;
+}
+.drop-sub {
+  font-size: 12px; color: rgba(255,255,255,0.25);
+  text-align: center; line-height: 1.6;
+}
+
+/* Divider */
+.drop-or {
+  font-size: 11px; color: rgba(255,255,255,0.18);
+  display: flex; align-items: center; gap: 10px; width: 100%;
+}
+.drop-or::before, .drop-or::after {
+  content: ''; flex: 1; height: 0.5px; background: rgba(255,255,255,0.08);
+}
+
+/* Paste row inside drop zone */
+.paste-row { display: flex; gap: 8px; width: 100%; margin-top: .25rem; }
+.paste-row .input {
+  flex: 1; height: 38px; font-size: 12px;
+  font-family: var(--mono); padding: 0 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 8px; color: rgba(255,255,255,0.7);
+  outline: none; transition: border-color .15s;
+}
+.paste-row .input::placeholder { color: rgba(255,255,255,0.2); }
+.paste-row .input:focus { border-color: rgba(0,210,150,0.5); }
+
+.paste-row .btn {
+  height: 38px; font-size: 12px; padding: 0 18px;
+  background: linear-gradient(135deg, #00d296, #00a8e8);
+  border: none; border-radius: 8px;
+  color: #000; font-weight: 600; cursor: pointer;
+  transition: opacity .15s, transform .1s;
+}
+.paste-row .btn:hover  { opacity: .9; }
+.paste-row .btn:active { transform: scale(0.97); }
+
+/* ── AUTH ── */
+#auth-wrap { width: 100%; max-width: 520px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.btn-github {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 40px; padding: 0 20px; border-radius: 8px;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.8); font: 13px/1 var(--font); cursor: pointer;
+  transition: background .15s;
+}
+.btn-github:hover { background: rgba(255,255,255,0.13); }
+.btn-github svg { width: 18px; height: 18px; }
+.auth-user { display: flex; align-items: center; gap: 10px; font-size: 13px; color: rgba(255,255,255,0.45); }
+.auth-user strong { color: rgba(255,255,255,0.75); }
+.btn-signout {
+  background: transparent; border: none; color: rgba(255,255,255,0.3);
+  font-size: 12px; cursor: pointer; padding: 0; transition: color .15s;
+}
+.btn-signout:hover { color: rgba(255,255,255,0.6); }
+.btn-github:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+#proxy-config { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 4px; }
+#proxy-url-row { display: flex; gap: 6px; width: 100%; max-width: 380px; }
+#proxy-url-input {
+  flex: 1; height: 34px; padding: 0 10px; font-size: 12px; font-family: var(--font);
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px; color: rgba(255,255,255,0.8); outline: none; transition: border-color .15s;
+}
+#proxy-url-input::placeholder { color: rgba(255,255,255,0.25); }
+#proxy-url-input:focus { border-color: rgba(255,255,255,0.35); }
+#proxy-url-input.input-err { border-color: rgba(255,80,80,0.5); }
+#btn-proxy-save {
+  height: 34px; padding: 0 14px; font-size: 12px; font-weight: 600;
+  background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 6px; color: rgba(255,255,255,0.8); cursor: pointer; transition: background .15s; white-space: nowrap;
+}
+#btn-proxy-save:hover { background: rgba(255,255,255,0.17); }
+#proxy-hint { font-size: 11px; color: rgba(255,255,255,0.25); text-align: center; }
+#proxy-set-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,0.3); }
+#proxy-set-host { color: rgba(255,255,255,0.5); font-family: monospace; font-size: 11px; }
+#btn-proxy-change { background: none; border: none; color: rgba(255,255,255,0.25); font-size: 11px; cursor: pointer; padding: 0; transition: color .15s; }
+#btn-proxy-change:hover { color: rgba(255,255,255,0.55); }
+
+.rate-info {
+  font-size: 12px; color: rgba(255,255,255,0.25);
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; justify-content: center; min-height: 20px;
+}
+.rate-info .badge     { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.1); }
+.rate-info .badge-warn { background: rgba(255,180,0,0.12); color: #ffb84d; border-color: rgba(255,180,0,0.2); }
+.rate-info .badge-err  { background: rgba(255,80,80,0.12); color: #ff7070; border-color: rgba(255,80,80,0.2); }
+
+/* ── DEVICE CODE MODAL ── */
+#deviceModal {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(0,0,0,0.75);
+  display: flex; align-items: center; justify-content: center;
+}
+.device-card {
+  background: #1a1a2e; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px; padding: 32px; width: 340px; text-align: center;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.device-card-title { font-size: 15px; font-weight: 600; color: #fff; }
+.device-card-sub   { font-size: 12px; color: rgba(255,255,255,0.4); line-height: 1.6; }
+.device-code {
+  font-family: var(--mono); font-size: 26px; font-weight: 700;
+  color: #00d296; letter-spacing: .12em;
+  background: rgba(0,210,150,0.08); border: 1px solid rgba(0,210,150,0.2);
+  border-radius: 10px; padding: 14px; cursor: pointer; user-select: all;
+  transition: background .15s;
+}
+.device-code:hover { background: rgba(0,210,150,0.14); }
+.device-code-hint  { font-size: 11px; color: rgba(255,255,255,0.25); }
+.btn-open-github {
+  height: 40px; border-radius: 8px;
+  background: linear-gradient(135deg, #00d296, #00a8e8);
+  border: none; color: #000; font-weight: 600; font-size: 13px;
+  cursor: pointer; font-family: var(--font); transition: opacity .15s;
+}
+.btn-open-github:hover { opacity: .9; }
+.device-waiting { font-size: 12px; color: rgba(255,255,255,0.35); display: flex; align-items: center; justify-content: center; gap: 8px; }
+.device-waiting .spin { animation: spin .8s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.device-err { font-size: 12px; color: #f87171; min-height: 16px; }
+.btn-device-cancel {
+  background: transparent; border: 0.5px solid rgba(255,255,255,0.15);
+  border-radius: 8px; color: rgba(255,255,255,0.4); font-size: 12px;
+  cursor: pointer; font-family: var(--font); padding: 8px;
+  transition: background .13s;
+}
+.btn-device-cancel:hover { background: rgba(255,255,255,0.06); }
+
+
+
+/* ─────────────────────────────────────────
+   LOADING
+───────────────────────────────────────── */
+#loading {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 1.25rem; padding: 2rem;
+}
+
+.loading-file {
+  font-size: 12px; color: var(--text3); font-family: var(--mono);
+  max-width: 480px; text-align: center; word-break: break-all;
+}
+
+.progress-track {
+  width: 280px; max-width: 100%;
+  height: 2px; background: var(--bg3); border-radius: 2px; overflow: hidden;
+}
+.progress-bar {
+  height: 100%; background: var(--accent); border-radius: 2px;
+  width: 0%; transition: width .25s ease;
+}
+
+.progress-text { font-size: 12px; color: var(--text2); }
+
+/* ─────────────────────────────────────────
+   TOP BAR
+───────────────────────────────────────── */
+#topbar {
+  position: fixed; top: 0; left: 0; right: 0; height: 42px;
+  background: var(--bg); border-bottom: 0.5px solid var(--border);
+  display: flex; align-items: center; padding: 0 14px; gap: 10px; z-index: 999;
+}
+.topbar-mark { font-size: 13px; font-weight: 500; flex-shrink: 0; }
+.topbar-sep  { width: 0.5px; height: 14px; background: var(--border2); flex-shrink: 0; }
+.topbar-url  { font-size: 11px; color: var(--text3); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.topbar-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ─────────────────────────────────────────
+   PREVIEW
+───────────────────────────────────────── */
+#preview { position: fixed; top: 42px; left: 0; right: 0; bottom: 0; }
+#preview-frame { width: 100%; height: 100%; border: none; background: #fff; display: block; }
+
+/* ─────────────────────────────────────────
+   ERROR
+───────────────────────────────────────── */
+#error-screen {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: .9rem; padding: 2rem;
+}
+.error-icon  { font-size: 28px; color: var(--error); }
+.error-title { font-size: 16px; font-weight: 500; }
+.error-msg   { font-size: 13px; color: var(--text2); text-align: center; max-width: 460px; line-height: 1.7; }
+.error-hint  {
+  font-size: 12px; color: var(--text2); line-height: 1.7;
+  background: var(--bg2); padding: .75rem 1rem; border-radius: var(--r);
+  border: 0.5px solid var(--border); max-width: 460px; width: 100%;
+}
+.error-hint code { font-family: var(--mono); font-size: 11px; background: var(--bg3); padding: 1px 5px; border-radius: 4px; }
+.error-actions { display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     LANDING
+═══════════════════════════════════════ -->
+<div id="landing">
+  <div class="wordmark">Git HTML Viewer</div>
+
+  <h1 class="landing-headline">Preview any HTML file<br><span>from any repo</span></h1>
+
+  <p class="tagline">Drop a GitHub or GitLab link — renders instantly, no cloning, no CORS proxy.</p>
+
+  <div class="drop-zone" id="drop-zone">
+    <div class="drop-icon">
+      <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 26V14M20 14l-5 5M20 14l5 5"/>
+        <rect x="6" y="6" width="28" height="28" rx="6"/>
+        <path d="M13 30h14"/>
+      </svg>
+    </div>
+    <div class="drop-label">Drop a GitHub or GitLab link here</div>
+    <div class="drop-sub">Drag from the address bar or any web page</div>
+
+    <div class="drop-or">or paste a URL</div>
+
+    <div class="paste-row">
+      <input id="url-input" class="input" type="url"
+        placeholder="https://github.com/owner/repo/blob/main/index.html"
+        autocomplete="off" spellcheck="false" />
+      <button class="btn" id="btn-preview">Preview</button>
+    </div>
+  </div>
+
+  <div id="auth-wrap">
+    <div id="auth-signed-out">
+      <button class="btn-github" id="btn-signin">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+        </svg>
+        Sign in with GitHub
+      </button>
+      <div id="proxy-config">
+        <div id="proxy-url-row">
+          <input id="proxy-url-input" type="url" placeholder="https://xxx.workers.dev" autocomplete="off" spellcheck="false" />
+          <button id="btn-proxy-save">Save</button>
+        </div>
+        <div id="proxy-hint">Worker URL required for sign in</div>
+        <div id="proxy-set-row" class="hidden">
+          Worker: <span id="proxy-set-host"></span>
+          <button id="btn-proxy-change">change</button>
+        </div>
+      </div>
+    </div>
+    <div id="auth-signed-in" class="auth-user hidden">
+      Signed in as <strong id="gh-username"></strong>
+      <button class="btn-signout" id="btn-signout">Sign out</button>
+    </div>
+  </div>
+
+  <div class="rate-info" id="rate-info"></div>
+
+</div>
+
+<!-- ═══════════════════════════════════════
+     DEVICE CODE MODAL
+═══════════════════════════════════════ -->
+<div id="deviceModal" class="hidden">
+  <div class="device-card">
+    <div class="device-card-title">Authorize Git HTML Viewer</div>
+    <p class="device-card-sub">Copy the code below, then open GitHub to authorize.</p>
+    <div class="device-code" id="device-code-display" title="Click to copy">XXXX-XXXX</div>
+    <div class="device-code-hint">Click code to copy &middot; expires in 15 min</div>
+    <button class="btn-open-github" id="btn-open-device">Open github.com/login/device &rarr;</button>
+    <div class="device-waiting" id="device-waiting">
+      <span class="spin">&#8635;</span> Waiting for authorization&hellip;
+    </div>
+    <div class="device-err" id="device-err"></div>
+    <button class="btn-device-cancel" id="btn-device-cancel">Cancel</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     LOADING
+═══════════════════════════════════════ -->
+<div id="loading" class="hidden">
+  <div class="wordmark">Git HTML Viewer</div>
+  <div class="loading-file" id="loading-file"></div>
+  <div class="progress-track"><div class="progress-bar" id="progress-bar"></div></div>
+  <div class="progress-text" id="progress-text">Fetching file…</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TOP BAR
+═══════════════════════════════════════ -->
+<div id="topbar" class="hidden">
+  <span class="topbar-mark">Git HTML Viewer</span>
+  <div class="topbar-sep"></div>
+  <span class="topbar-url" id="topbar-url"></span>
+  <div class="topbar-actions">
+    <button class="btn btn-sm" id="btn-open">Open original</button>
+    <button class="btn btn-sm" id="btn-copy">Copy link</button>
+    <button class="btn btn-sm" id="btn-refresh">↺ Refresh</button>
+    <button class="btn btn-sm" id="btn-close">✕</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PREVIEW
+═══════════════════════════════════════ -->
+<div id="preview" class="hidden">
+  <iframe id="preview-frame"
+    sandbox="allow-scripts allow-forms allow-popups allow-modals allow-pointer-lock"
+    allow="fullscreen">
+  </iframe>
+</div>
+
+<!-- ═══════════════════════════════════════
+     ERROR
+═══════════════════════════════════════ -->
+<div id="error-screen" class="hidden">
+  <div class="error-icon">⚠</div>
+  <div class="error-title" id="error-title">Preview failed</div>
+  <div class="error-msg"   id="error-msg"></div>
+  <div class="error-hint hidden" id="error-hint"></div>
+  <div class="error-actions">
+    <button class="btn" id="btn-retry">Retry</button>
+    <button class="btn" id="btn-home">Home</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ══════════════════════════════════════════════════
+   CACHE  (sessionStorage — clears on tab close)
+══════════════════════════════════════════════════ */
+const Cache = {
+  get(key) {
+    try { return sessionStorage.getItem(key); } catch { return null; }
+  },
+  set(key, val) {
+    try {
+      sessionStorage.setItem(key, val);
+    } catch {
+      try { sessionStorage.clear(); sessionStorage.setItem(key, val); } catch {}
+    }
+  },
+  clear() {
+    try { sessionStorage.clear(); } catch {}
+  }
+};
+
+/* ══════════════════════════════════════════════════
+   URL PARSER
+══════════════════════════════════════════════════ */
+
+/**
+ * Parses a forge URL into a FileRef.
+ * @returns {{ forge, owner, repo, branch, path, dir, forgeHost? }}
+ */
+function parseForgeUrl(raw) {
+  let u;
+  try { u = new URL(raw); } catch { throw new Error('Not a valid URL: ' + raw); }
+
+  const host = u.hostname.replace(/^www\./, '');
+  const segs = u.pathname.split('/').filter(Boolean);
+
+  /* ── GitHub ── */
+  if (host === 'github.com') {
+    const [owner, repo, type, branch, ...rest] = segs;
+    if (!owner || !repo) throw new Error('Expected: github.com/owner/repo/blob/branch/file.html');
+    if (type === 'blob') {
+      if (!branch) throw new Error('No branch found in GitHub URL');
+      const path = rest.join('/');
+      if (!path) throw new Error('URL points to a directory — use a /blob/ link to a specific .html file');
+      return { forge: 'github', owner, repo, branch, path, dir: dirOf(path) };
+    }
+    if (type === 'tree') throw new Error('URL points to a directory — navigate to an .html file and copy that URL');
+    throw new Error('Use a github.com/owner/repo/blob/branch/file.html link');
+  }
+
+  /* ── GitHub Raw ── */
+  if (host === 'raw.githubusercontent.com') {
+    const [owner, repo, branch, ...rest] = segs;
+    const path = rest.join('/');
+    return { forge: 'github', owner, repo, branch, path, dir: dirOf(path) };
+  }
+
+  /* ── GitLab ── */
+  if (host === 'gitlab.com') {
+    // Path: /namespace[/subgroup]/repo/-/blob/branch/file
+    const dash = segs.indexOf('-');
+    if (dash < 2) throw new Error('Invalid GitLab URL. Expected: gitlab.com/namespace/repo/-/blob/branch/file.html');
+    const nsParts = segs.slice(0, dash);
+    const repo    = nsParts.pop();
+    const owner   = nsParts.join('/');
+    // segs[dash] === '-', segs[dash+1] === 'blob'|'raw'
+    const branch  = segs[dash + 2];
+    const path    = segs.slice(dash + 3).join('/');
+    if (!path) throw new Error('URL points to a directory — use a /-/blob/ link to a specific file');
+    return { forge: 'gitlab', owner, repo, branch, path, dir: dirOf(path) };
+  }
+
+  throw new Error(`Unsupported host: ${host}. Supported: GitHub, GitLab`);
+}
+
+function dirOf(path) {
+  const i = path.lastIndexOf('/');
+  return i >= 0 ? path.slice(0, i + 1) : '';
+}
+
+/* ══════════════════════════════════════════════════
+   FORGE API CLIENTS
+══════════════════════════════════════════════════ */
+
+let rateLimitRemaining = null;
+let rateLimitReset     = null;
+let sessionId = '';
+let _pollAbort = null;
+
+let OAUTH_PROXY = localStorage.getItem('ghv-proxy-url') || '';
+
+async function startDeviceFlow() {
+  document.getElementById('device-err').textContent = '';
+  document.getElementById('device-waiting').classList.remove('hidden');
+  try {
+    if (!OAUTH_PROXY) throw new Error('OAUTH_PROXY not set — deploy cloudflare-worker.js');
+    const res = await fetch(OAUTH_PROXY + '/auth/start', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    if (!res.ok) throw new Error('Worker error ' + res.status);
+    const { session_id, user_code, verification_uri, interval } = await res.json();
+    showDeviceModal(user_code, verification_uri);
+    pollWorkerForAuth(session_id, interval);
+  } catch (e) {
+    document.getElementById('deviceModal').classList.remove('hidden');
+    setDeviceError('Failed to start: ' + (e.message || e));
+  }
+}
+
+function pollWorkerForAuth(sid, interval) {
+  _pollAbort = new AbortController();
+  const signal = _pollAbort.signal;
+  let delay = interval * 1000;
+
+  async function tick() {
+    if (signal.aborted) return;
+    try {
+      const res  = await fetch(`${OAUTH_PROXY}/auth/poll?sid=${encodeURIComponent(sid)}`);
+      if (!res.ok) { setDeviceError('Worker error ' + res.status); return; }
+      const data = await res.json();
+      if (signal.aborted) return;
+
+      if (data.status === 'ok') {
+        sessionId = sid;
+        localStorage.setItem('ghv-sid', sid);
+        localStorage.setItem('ghv-user', data.login || '');
+        hideDeviceModal();
+        setAuthUser(data.login || '');
+        document.getElementById('auth-signed-out').classList.add('hidden');
+        document.getElementById('auth-signed-in').classList.remove('hidden');
+        renderProxyConfig();
+        const initUrl = getUrlFromLocation();
+        if (initUrl) preview(initUrl);
+        else { setState('landing'); initRateLimit(); }
+        return;
+      }
+      if (data.status === 'pending') {
+        delay = (data.interval || interval) * 1000;
+      } else {
+        setDeviceError(data.reason || data.status || 'Auth failed');
+        return;
+      }
+    } catch (fetchErr) {
+      setDeviceError('Network error: ' + fetchErr.message);
+      return;
+    }
+    if (!signal.aborted) setTimeout(tick, delay);
+  }
+
+  setTimeout(tick, delay);
+}
+
+function setAuthUser(login) {
+  document.getElementById('auth-signed-out').classList.add('hidden');
+  document.getElementById('auth-signed-in').classList.remove('hidden');
+  document.getElementById('gh-username').textContent = '@' + login;
+}
+
+function clearAuth() {
+  const sid = sessionId;
+  sessionId = '';
+  localStorage.removeItem('ghv-sid');
+  localStorage.removeItem('ghv-user');
+  document.getElementById('auth-signed-in').classList.add('hidden');
+  document.getElementById('auth-signed-out').classList.remove('hidden');
+  if (sid) {
+    fetch(OAUTH_PROXY + '/auth/signout', {
+      method: 'POST',
+      headers: { 'X-Session-ID': sid },
+    }).catch(() => {});
+  }
+}
+
+function renderProxyConfig() {
+  const hasProxy  = !!OAUTH_PROXY;
+  const urlRow    = document.getElementById('proxy-url-row');
+  const hintEl    = document.getElementById('proxy-hint');
+  const setRow    = document.getElementById('proxy-set-row');
+  const signinBtn = document.getElementById('btn-signin');
+  if (hasProxy) {
+    urlRow.classList.add('hidden');
+    hintEl.classList.add('hidden');
+    setRow.classList.remove('hidden');
+    try { document.getElementById('proxy-set-host').textContent = new URL(OAUTH_PROXY).hostname; }
+    catch { document.getElementById('proxy-set-host').textContent = OAUTH_PROXY; }
+    signinBtn.disabled = false;
+  } else {
+    urlRow.classList.remove('hidden');
+    hintEl.classList.remove('hidden');
+    setRow.classList.add('hidden');
+    signinBtn.disabled = true;
+  }
+}
+
+function saveProxyUrl() {
+  const input = document.getElementById('proxy-url-input');
+  const val   = input.value.trim().replace(/\/+$/, '');
+  if (!val.startsWith('http://') && !val.startsWith('https://')) {
+    input.classList.add('input-err');
+    return;
+  }
+  input.classList.remove('input-err');
+  OAUTH_PROXY = val;
+  localStorage.setItem('ghv-proxy-url', val);
+  renderProxyConfig();
+}
+
+function showDeviceModal(userCode, verifyUrl) {
+  document.getElementById('device-code-display').textContent = userCode;
+  document.getElementById('device-err').textContent = '';
+  document.getElementById('device-waiting').classList.remove('hidden');
+  document.getElementById('btn-open-device').onclick = () => window.open(verifyUrl, '_blank', 'noopener');
+  document.getElementById('deviceModal').classList.remove('hidden');
+}
+
+function hideDeviceModal() {
+  document.getElementById('deviceModal').classList.add('hidden');
+  if (_pollAbort) { _pollAbort.abort(); _pollAbort = null; }
+}
+
+function setDeviceError(msg) {
+  document.getElementById('device-err').textContent = msg;
+  document.getElementById('device-waiting').classList.add('hidden');
+}
+
+class HttpError extends Error {
+  constructor(status, msg) { super(msg); this.status = status; }
+}
+class RateLimitError extends Error {
+  constructor(mins) {
+    super(`GitHub API rate limit reached. Resets in ~${mins} min.`);
+    this.isRateLimit = true; this.resetMins = mins;
+  }
+}
+
+/* Main entry: fetch file as decoded text */
+async function fetchText(ref) {
+  const key = cacheKey('txt', ref);
+  const hit = Cache.get(key);
+  if (hit !== null) return hit;
+
+  let text;
+  if (ref.forge === 'github')    text = await ghFetchText(ref);
+  else if (ref.forge === 'gitlab')    text = await glFetchText(ref);
+  else throw new Error('Unknown forge: ' + ref.forge);
+
+  Cache.set(key, text);
+  return text;
+}
+
+/* Main entry: fetch file as raw base64 (for images/fonts) */
+async function fetchBinary(ref) {
+  const key = cacheKey('b64', ref);
+  const hit = Cache.get(key);
+  if (hit !== null) return hit;
+
+  let b64;
+  if (ref.forge === 'github') b64 = await ghFetchB64(ref);
+  else b64 = await glFetchB64(ref);
+
+  Cache.set(key, b64);
+  return b64;
+}
+
+function cacheKey(prefix, ref) {
+  return `${prefix}:${ref.forge}:${ref.owner}/${ref.repo}/${ref.branch}/${ref.path}`;
+}
+
+/* ── GitHub ── */
+async function ghFetchText(ref) {
+  const data = await ghContents(ref);
+  if (Array.isArray(data)) throw new Error('URL points to a directory, not a file');
+  if (data.encoding !== 'base64' || !data.content) {
+    if (data.sha) return ghBlobText(ref, data.sha);
+    throw new Error('GitHub returned empty content');
+  }
+  return b64decode(data.content);
+}
+
+async function ghFetchB64(ref) {
+  const data = await ghContents(ref);
+  if (Array.isArray(data)) throw new Error('Directory');
+  if (!data.content) {
+    if (data.sha) return ghBlobB64(ref, data.sha);
+    throw new Error('Empty content');
+  }
+  return data.content.replace(/\n/g, '');
+}
+
+async function ghContents(ref) {
+  const url = `https://api.github.com/repos/${ref.owner}/${ref.repo}/contents/${encPath(ref.path)}?ref=${enc(ref.branch)}`;
+  return ghJSON(url);
+}
+
+async function ghBlobText(ref, sha) {
+  const url = `https://api.github.com/repos/${ref.owner}/${ref.repo}/git/blobs/${sha}`;
+  const data = await ghJSON(url);
+  return b64decode(data.content);
+}
+
+async function ghBlobB64(ref, sha) {
+  const url = `https://api.github.com/repos/${ref.owner}/${ref.repo}/git/blobs/${sha}`;
+  const data = await ghJSON(url);
+  return data.content.replace(/\n/g, '');
+}
+
+async function ghJSON(url) {
+  const headers = { Accept: 'application/vnd.github.v3+json' };
+  let fetchUrl = url;
+  if (sessionId && OAUTH_PROXY) {
+    const pathMatch = url.match(/https:\/\/api\.github\.com(\/.*)/);
+    if (pathMatch) fetchUrl = OAUTH_PROXY + '/api/github' + pathMatch[1];
+    headers['X-Session-ID'] = sessionId;
+  }
+  const res = await fetch(fetchUrl, { headers });
+
+  const rem = res.headers.get('X-RateLimit-Remaining');
+  const rst = res.headers.get('X-RateLimit-Reset');
+  if (rem !== null) {
+    rateLimitRemaining = parseInt(rem);
+    rateLimitReset = rst ? new Date(parseInt(rst) * 1000) : null;
+    renderRateInfo();
+  }
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401 && sessionId) {
+      clearAuth();
+      throw new HttpError(401, 'Session expired. Please sign in again.');
+    }
+    if (res.status === 403 && body.message?.includes('rate limit')) {
+      const mins = rateLimitReset ? Math.ceil((rateLimitReset - Date.now()) / 60000) : '?';
+      throw new RateLimitError(mins);
+    }
+    if (res.status === 404) throw new HttpError(404, `File not found. Check the URL points to a public repo and the branch/path are correct.`);
+    throw new HttpError(res.status, body.message || `GitHub API error ${res.status}`);
+  }
+  return res.json();
+}
+
+async function initRateLimit() {
+  try {
+    const headers = { Accept: 'application/vnd.github.v3+json' };
+    let rlUrl = 'https://api.github.com/rate_limit';
+    if (sessionId && OAUTH_PROXY) {
+      rlUrl = OAUTH_PROXY + '/api/github/rate_limit';
+      headers['X-Session-ID'] = sessionId;
+    }
+    const res = await fetch(rlUrl, { headers });
+    const rem = res.headers.get('X-RateLimit-Remaining');
+    const rst = res.headers.get('X-RateLimit-Reset');
+    if (rem !== null) {
+      rateLimitRemaining = parseInt(rem);
+      rateLimitReset = rst ? new Date(parseInt(rst) * 1000) : null;
+    } else {
+      const data = await res.json();
+      const core = data?.resources?.core ?? data?.rate;
+      if (core?.remaining !== undefined) {
+        rateLimitRemaining = core.remaining;
+        rateLimitReset = core.reset ? new Date(core.reset * 1000) : null;
+      }
+    }
+    renderRateInfo();
+  } catch {}
+}
+
+/* ── GitLab ── */
+async function glFetchText(ref) {
+  const res = await glFetch(ref);
+  return res.text();
+}
+
+async function glFetchB64(ref) {
+  const res = await glFetch(ref);
+  const buf = await res.arrayBuffer();
+  return bufToB64(buf);
+}
+
+async function glFetch(ref) {
+  const proj = enc(ref.owner ? `${ref.owner}/${ref.repo}` : ref.repo);
+  const file  = enc(ref.path);
+  const url   = `https://gitlab.com/api/v4/projects/${proj}/repository/files/${file}/raw?ref=${enc(ref.branch)}`;
+  const headers = {};
+  let fetchUrl = url;
+  if (sessionId && OAUTH_PROXY) {
+    fetchUrl = OAUTH_PROXY + '/api/github/raw?url=' + encodeURIComponent(url);
+    headers['X-Session-ID'] = sessionId;
+  }
+  const res = await fetch(fetchUrl, { headers });
+
+  if (!res.ok) {
+    // Handle rate limit
+    if (res.status === 429) {
+      const resetHeader = res.headers.get('RateLimit-Reset') || res.headers.get('Retry-After');
+      const mins = resetHeader ? Math.ceil(parseInt(resetHeader) / 60) : '?';
+      throw new RateLimitError(mins);
+    }
+    if (res.status === 404) throw new HttpError(404, `File not found. Check the URL points to a public repo and the branch/path are correct.`);
+    throw new HttpError(res.status, `GitLab API error ${res.status}`);
+  }
+  return res;
+}
+
+/* ══════════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════════ */
+
+function b64decode(b64) {
+  const clean = b64.replace(/\n/g, '');
+  const bytes = Uint8Array.from(atob(clean), c => c.charCodeAt(0));
+  // Detect charset from first 1 KB
+  const probe  = new TextDecoder('latin1').decode(bytes.slice(0, 1024));
+  const csMatch = probe.match(/charset=["']?\s*([^"';\s>]+)/i);
+  const charset = csMatch ? csMatch[1] : 'utf-8';
+  try { return new TextDecoder(charset).decode(bytes); }
+  catch { return new TextDecoder('utf-8').decode(bytes); }
+}
+
+function bufToB64(buf) {
+  const bytes = new Uint8Array(buf);
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 8192)
+    s += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  return btoa(s);
+}
+
+function enc(s)     { return encodeURIComponent(s); }
+function encPath(p) { return p.split('/').map(encodeURIComponent).join('/'); }
+
+function extOf(p) { return (p.split('?')[0].split('.').pop() || '').toLowerCase(); }
+
+function mimeOf(ext) {
+  return ({
+    png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif',
+    webp:'image/webp', avif:'image/avif', svg:'image/svg+xml', ico:'image/x-icon',
+    woff:'font/woff', woff2:'font/woff2', ttf:'font/ttf', otf:'font/otf',
+    eot:'application/vnd.ms-fontobject',
+    mp4:'video/mp4', webm:'video/webm', ogg:'video/ogg',
+    mp3:'audio/mpeg', wav:'audio/wav',
+  })[ext] || 'application/octet-stream';
+}
+
+function resolveRef(assetUrl, parentRef) {
+  if (!assetUrl) return null;
+  const clean = assetUrl.split('?')[0].split('#')[0].trim();
+  if (!clean) return null;
+  if (/^(data:|blob:|#|javascript:)/i.test(clean)) return null;
+
+  // Absolute HTTP
+  if (/^https?:\/\//i.test(clean)) {
+    // GitHub raw
+    if (clean.includes('raw.githubusercontent.com')) {
+      try {
+        const u = new URL(clean);
+        const [owner, repo, branch, ...rest] = u.pathname.split('/').filter(Boolean);
+        const path = rest.join('/');
+        return { forge:'github', owner, repo, branch, path, dir: dirOf(path) };
+      } catch { return null; }
+    }
+    // GitLab raw
+    if (clean.includes('gitlab.com') && clean.includes('/-/raw/')) {
+      try {
+        const u = new URL(clean);
+        const segs = u.pathname.split('/').filter(Boolean);
+        const dash = segs.indexOf('-');
+        if (dash < 2) return null;
+        const nsParts = segs.slice(0, dash);
+        const repo = nsParts.pop();
+        const owner = nsParts.join('/');
+        const branch = segs[dash + 2];
+        const path = segs.slice(dash + 3).join('/');
+        return { forge:'gitlab', owner, repo, branch, path, dir: dirOf(path) };
+      } catch { return null; }
+    }
+    return null; // External CDN — leave as-is
+  }
+
+  // Protocol-relative
+  if (clean.startsWith('//')) return null;
+
+  // Relative path — resolve against parent dir
+  const base  = parentRef.dir || '';
+  const joined = clean.startsWith('/') ? clean.slice(1) : base + clean;
+  const resolved = normPath(joined);
+  return { ...parentRef, path: resolved, dir: dirOf(resolved) };
+}
+
+function normPath(p) {
+  const parts = p.split('/');
+  const out = [];
+  for (const seg of parts) {
+    if (seg === '..') out.pop();
+    else if (seg !== '.') out.push(seg);
+  }
+  return out.join('/');
+}
+
+/* ══════════════════════════════════════════════════
+   ASSET INLINER
+══════════════════════════════════════════════════ */
+
+async function inlineAssets(html, ref, onProgress) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const tasks = [];
+
+  /* Collect CSS links */
+  doc.querySelectorAll('link[rel="stylesheet"][href]').forEach(el => {
+    const r = resolveRef(el.getAttribute('href'), ref);
+    if (r) tasks.push({ kind: 'css', el, ref: r });
+  });
+
+  /* Collect external scripts */
+  doc.querySelectorAll('script[src]').forEach(el => {
+    const r = resolveRef(el.getAttribute('src'), ref);
+    if (r) tasks.push({ kind: 'js', el, ref: r });
+  });
+
+  /* Collect images */
+  doc.querySelectorAll('img[src], video[poster], audio[src], video[src]').forEach(el => {
+    const attr = el.hasAttribute('poster') ? 'poster' : 'src';
+    const r = resolveRef(el.getAttribute(attr), ref);
+    if (r) tasks.push({ kind: 'img', el, attr, ref: r });
+  });
+
+  /* Collect source[src] and source[srcset] */
+  doc.querySelectorAll('source[src]').forEach(el => {
+    const r = resolveRef(el.getAttribute('src'), ref);
+    if (r) tasks.push({ kind: 'img', el, attr: 'src', ref: r });
+  });
+
+  doc.querySelectorAll('[srcset]').forEach(el => {
+    tasks.push({ kind: 'srcset', el, ref });
+  });
+
+  /* Collect favicons */
+  doc.querySelectorAll('link[rel~="icon"][href], link[rel="apple-touch-icon"][href]').forEach(el => {
+    const r = resolveRef(el.getAttribute('href'), ref);
+    if (r) tasks.push({ kind: 'favicon', el, ref: r });
+  });
+
+  /* Collect inline <style> url() references */
+  doc.querySelectorAll('style').forEach(el => {
+    tasks.push({ kind: 'inline-css', el, ref });
+  });
+
+  let done = 0;
+  const total = tasks.length;
+  onProgress(0, total || 1);
+
+  await Promise.allSettled(tasks.map(async task => {
+    try {
+      await processTask(task);
+    } catch (e) {
+      console.warn('[htmlpreview] asset failed:', e.message);
+    }
+    onProgress(++done, total || 1);
+  }));
+
+  /* Inject <base> as fallback for anything we missed */
+  injectBase(doc, ref);
+
+  return '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+}
+
+async function processTask(task) {
+  const { kind, el, ref: aRef, attr } = task;
+
+  if (kind === 'css') {
+    const raw = await fetchText(aRef);
+    const css = await processCss(raw, aRef);
+    const style = doc_createElement_from(el, 'style');
+    style.textContent = css;
+    if (el.getAttribute('media')) style.setAttribute('media', el.getAttribute('media'));
+    el.replaceWith(style);
+
+  } else if (kind === 'inline-css') {
+    el.textContent = await processCss(el.textContent, aRef);
+
+  } else if (kind === 'js') {
+    const code = await fetchText(aRef);
+    const script = el.ownerDocument.createElement('script');
+    script.textContent = code;
+    for (const a of el.attributes) if (a.name !== 'src') script.setAttribute(a.name, a.value);
+    el.replaceWith(script);
+
+  } else if (kind === 'img' || kind === 'favicon') {
+    const b64  = await fetchBinary(aRef);
+    const mime = mimeOf(extOf(aRef.path));
+    const a    = attr || 'href';
+    el.setAttribute(a, `data:${mime};base64,${b64}`);
+    if (kind === 'favicon') {
+      // Remove type attr to avoid MIME conflicts
+      el.removeAttribute('type');
+    }
+
+  } else if (kind === 'srcset') {
+    const original = el.getAttribute('srcset') || '';
+    el.setAttribute('srcset', await processSrcset(original, aRef.ref || aRef));
+  }
+}
+
+function doc_createElement_from(el, tag) {
+  return el.ownerDocument.createElement(tag);
+}
+
+async function processCss(css, ref, depth = 0) {
+  if (!css || depth > 4) return css;
+
+  /* @import */
+  const importRe = /@import\s+(?:url\s*\(\s*['"]?([^'")\s]+)['"]?\s*\)|['"]([^'"]+)['"])[^;]*;/gi;
+  let m;
+  const imports = [];
+  while ((m = importRe.exec(css)) !== null)
+    imports.push({ full: m[0], url: m[1] || m[2] });
+
+  for (const imp of imports) {
+    const r = resolveRef(imp.url, ref);
+    if (!r) continue;
+    try {
+      const imported = await fetchText(r);
+      const inlined  = await processCss(imported, { ...r, dir: dirOf(r.path) }, depth + 1);
+      css = css.split(imp.full).join(inlined);
+    } catch (e) { console.warn('[htmlpreview] @import failed:', e.message); }
+  }
+
+  /* url() */
+  const urlRe = /url\(\s*(['"]?)(?!data:|#)([^'")\s]+)\1\s*\)/gi;
+  const urls = [];
+  while ((m = urlRe.exec(css)) !== null)
+    urls.push({ full: m[0], url: m[2] });
+
+  for (const u of urls) {
+    const r = resolveRef(u.url, ref);
+    if (!r) continue;
+    try {
+      const b64  = await fetchBinary(r);
+      const mime = mimeOf(extOf(r.path));
+      css = css.split(u.full).join(`url(data:${mime};base64,${b64})`);
+    } catch (e) { console.warn('[htmlpreview] CSS url() failed:', e.message); }
+  }
+
+  return css;
+}
+
+async function processSrcset(srcset, ref) {
+  const entries = srcset.split(',').map(s => s.trim()).filter(Boolean);
+  const result  = [];
+  for (const entry of entries) {
+    const parts = entry.split(/\s+/);
+    const url   = parts[0];
+    const desc  = parts.slice(1).join(' ');
+    const r = resolveRef(url, ref);
+    if (r) {
+      try {
+        const b64  = await fetchBinary(r);
+        const mime = mimeOf(extOf(r.path));
+        result.push(`data:${mime};base64,${b64}${desc ? ' ' + desc : ''}`);
+        continue;
+      } catch {}
+    }
+    result.push(entry);
+  }
+  return result.join(', ');
+}
+
+function injectBase(doc, ref) {
+  // Existing <base> wins; only add if missing
+  if (doc.querySelector('base')) return;
+
+  let href = '';
+  if (ref.forge === 'github') {
+    href = `https://raw.githubusercontent.com/${ref.owner}/${ref.repo}/${ref.branch}/${ref.dir}`;
+  } else if (ref.forge === 'gitlab') {
+    const proj = ref.owner ? `${ref.owner}/${ref.repo}` : ref.repo;
+    href = `https://gitlab.com/${proj}/-/raw/${ref.branch}/${ref.dir}`;
+  }
+  if (!href) return;
+
+  const base = doc.createElement('base');
+  base.setAttribute('href', href);
+  const head = doc.head;
+  if (head) head.insertBefore(base, head.firstChild);
+}
+
+/* ══════════════════════════════════════════════════
+   DOM REFS
+══════════════════════════════════════════════════ */
+const $landing      = document.getElementById('landing');
+const $loading      = document.getElementById('loading');
+const $loadingFile  = document.getElementById('loading-file');
+const $progressBar  = document.getElementById('progress-bar');
+const $progressText = document.getElementById('progress-text');
+const $topbar       = document.getElementById('topbar');
+const $topbarUrl    = document.getElementById('topbar-url');
+const $preview      = document.getElementById('preview');
+const $frame        = document.getElementById('preview-frame');
+const $errorScreen  = document.getElementById('error-screen');
+const $errorTitle   = document.getElementById('error-title');
+const $errorMsg     = document.getElementById('error-msg');
+const $errorHint    = document.getElementById('error-hint');
+const $urlInput     = document.getElementById('url-input');
+const $rateInfo     = document.getElementById('rate-info');
+
+/* ══════════════════════════════════════════════════
+   UI STATE
+══════════════════════════════════════════════════ */
+
+function setState(state) {
+  $landing.classList.toggle('hidden',     state !== 'landing');
+  $loading.classList.toggle('hidden',     state !== 'loading');
+  $topbar.classList.toggle('hidden',      state !== 'preview');
+  $preview.classList.toggle('hidden',     state !== 'preview');
+  $errorScreen.classList.toggle('hidden', state !== 'error');
+}
+
+function setProgress(done, total) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  $progressBar.style.width = pct + '%';
+  if (done === 0)         $progressText.textContent = 'Fetching file…';
+  else if (done < total)  $progressText.textContent = `Loading assets: ${done} / ${total}`;
+  else                    $progressText.textContent  = 'Rendering…';
+}
+
+function renderRateInfo() {
+  if (rateLimitRemaining === null) return;
+  const low   = rateLimitRemaining < 10;
+  const ok    = rateLimitRemaining >= 20;
+  const cls   = low ? 'badge badge-err' : !ok ? 'badge badge-warn' : 'badge';
+  const reset = rateLimitReset
+    ? `· resets ${rateLimitReset.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}`
+    : '';
+  $rateInfo.innerHTML = `<span class="${cls}">GitHub API: ${rateLimitRemaining} req/hr left ${reset}</span>`;
+}
+
+function showError(err) {
+  setState('error');
+  if (err.isRateLimit) {
+    $errorTitle.textContent = 'Rate limit reached';
+    $errorMsg.textContent   = err.message;
+    $errorHint.classList.remove('hidden');
+    $errorHint.innerHTML =
+      `Sign in with your GitHub account to get 5,000 req/hr and private repo access.<br>
+       Click <code>Sign in with GitHub</code> on the home screen.`;
+  } else if (err.status === 404) {
+    $errorTitle.textContent = 'File not found';
+    $errorMsg.textContent   = err.message || 'The file could not be found in the repository.';
+    $errorHint.classList.add('hidden');
+  } else {
+    $errorTitle.textContent = 'Preview failed';
+    $errorMsg.textContent   = err.message || String(err);
+    $errorHint.classList.add('hidden');
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   CORE
+══════════════════════════════════════════════════ */
+
+let _currentUrl = null;
+
+async function preview(rawUrl) {
+  _currentUrl = rawUrl.trim();
+  setState('loading');
+  $loadingFile.textContent = _currentUrl;
+  setProgress(0, 1);
+
+  // Update address bar
+  history.pushState({ url: _currentUrl }, '', appOrigin() + '?' + _currentUrl);
+
+  try {
+    const ref  = parseForgeUrl(_currentUrl);
+    const html = await fetchText(ref);
+
+    setProgress(0, 10);
+    const processed = await inlineAssets(html, ref, (done, total) => setProgress(done, total));
+
+    $topbarUrl.textContent = _currentUrl;
+    await new Promise(resolve => {
+      $frame.onload = () => { $frame.onload = null; resolve(); };
+      $frame.srcdoc = processed;
+    });
+    setState('preview');
+
+  } catch (err) {
+    console.error('[htmlpreview]', err);
+    showError(err);
+  }
+}
+
+function appOrigin() {
+  return location.origin + location.pathname;
+}
+
+function getUrlFromLocation() {
+  const search = location.search;
+  if (!search || search === '?') return null;
+  const raw = search.slice(1);
+
+  // ?url=... (named param)
+  const params = new URLSearchParams(search);
+  if (params.has('url')) return params.get('url');
+
+  // ?https://... (direct concat)
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  return null;
+}
+
+
+
+/* ══════════════════════════════════════════════════
+   EVENTS
+══════════════════════════════════════════════════ */
+
+/* ── DROP ZONE ── */
+const $dropZone = document.getElementById('drop-zone');
+
+// Prevent browser default for drag events on the whole page
+// (so dropped URLs don't navigate away)
+['dragenter','dragover','dragleave','drop'].forEach(ev => {
+  document.addEventListener(ev, e => e.preventDefault());
+});
+
+let _dragCounter = 0; // track nested dragenter/dragleave
+
+$dropZone.addEventListener('dragenter', e => {
+  e.preventDefault();
+  _dragCounter++;
+  $dropZone.classList.add('drag-over');
+});
+
+$dropZone.addEventListener('dragleave', e => {
+  e.preventDefault();
+  _dragCounter--;
+  if (_dragCounter <= 0) {
+    _dragCounter = 0;
+    $dropZone.classList.remove('drag-over');
+  }
+});
+
+$dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'link';
+});
+
+$dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  _dragCounter = 0;
+  $dropZone.classList.remove('drag-over');
+
+  // Try to extract a URL from the drop
+  const dt = e.dataTransfer;
+
+  // 1. URI list (most common for dragged links / address bar)
+  const uriList = dt.getData('text/uri-list');
+  if (uriList) {
+    const firstUrl = uriList.split('\n').map(s => s.trim()).find(s => s && !s.startsWith('#'));
+    if (firstUrl) { preview(firstUrl); return; }
+  }
+
+  // 2. Plain text (fallback for some browsers)
+  const text = dt.getData('text/plain');
+  if (text && /^https?:\/\//i.test(text.trim())) {
+    preview(text.trim()); return;
+  }
+
+  // 3. HTML (dragged link — extract href)
+  const html = dt.getData('text/html');
+  if (html) {
+    const m = html.match(/href=["']([^"']+)["']/i);
+    if (m && /^https?:\/\//i.test(m[1])) { preview(m[1]); return; }
+  }
+
+  // Nothing usable dropped
+  $dropZone.style.borderColor = 'var(--error)';
+  setTimeout(() => $dropZone.style.borderColor = '', 1000);
+});
+
+/* Preview button / Enter key */
+document.getElementById('btn-preview').addEventListener('click', () => {
+  const v = $urlInput.value.trim();
+  if (v) preview(v);
+});
+$urlInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btn-preview').click();
+});
+
+/* Auth */
+document.getElementById('btn-signin').addEventListener('click', startDeviceFlow);
+
+document.getElementById('btn-signout').addEventListener('click', () => {
+  clearAuth();
+  setState('landing');
+  initRateLimit();
+});
+
+document.getElementById('btn-proxy-save').addEventListener('click', saveProxyUrl);
+document.getElementById('proxy-url-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveProxyUrl(); });
+document.getElementById('btn-proxy-change').addEventListener('click', () => {
+  const input = document.getElementById('proxy-url-input');
+  input.value = OAUTH_PROXY;
+  document.getElementById('proxy-url-row').classList.remove('hidden');
+  document.getElementById('proxy-hint').classList.add('hidden');
+  document.getElementById('proxy-set-row').classList.add('hidden');
+  document.getElementById('btn-signin').disabled = true;
+  input.focus();
+  input.select();
+});
+
+document.getElementById('btn-device-cancel').addEventListener('click', hideDeviceModal);
+
+document.getElementById('device-code-display').addEventListener('click', async () => {
+  const code = document.getElementById('device-code-display').textContent;
+  try { await navigator.clipboard.writeText(code); } catch {}
+});
+
+/* Topbar */
+document.getElementById('btn-open').addEventListener('click', () => {
+  if (_currentUrl) window.open(_currentUrl, '_blank', 'noopener');
+});
+document.getElementById('btn-copy').addEventListener('click', async () => {
+  const link = appOrigin() + '?' + _currentUrl;
+  try {
+    await navigator.clipboard.writeText(link);
+    const btn = document.getElementById('btn-copy');
+    btn.textContent = 'Copied ✓';
+    setTimeout(() => btn.textContent = 'Copy link', 1800);
+  } catch {}
+});
+document.getElementById('btn-refresh').addEventListener('click', () => {
+  if (_currentUrl) { Cache.clear(); preview(_currentUrl); }
+});
+document.getElementById('btn-close').addEventListener('click', () => {
+  history.pushState(null, '', appOrigin());
+  _currentUrl = null;
+  setState('landing');
+});
+
+/* Error screen */
+document.getElementById('btn-retry').addEventListener('click', () => {
+  if (_currentUrl) preview(_currentUrl);
+});
+document.getElementById('btn-home').addEventListener('click', () => {
+  history.pushState(null, '', appOrigin());
+  _currentUrl = null;
+  setState('landing');
+});
+
+/* Browser back/forward */
+window.addEventListener('popstate', () => {
+  const u = getUrlFromLocation();
+  if (u) preview(u);
+  else setState('landing');
+});
+
+/* ══════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════ */
+
+(async () => {
+  const savedSid  = localStorage.getItem('ghv-sid');
+  const savedUser = localStorage.getItem('ghv-user');
+  if (savedSid) {
+    sessionId = savedSid;
+    if (savedUser) setAuthUser(savedUser);
+  }
+  renderProxyConfig();
+  const initUrl = getUrlFromLocation();
+  if (initUrl) preview(initUrl);
+  else { setState('landing'); initRateLimit(); }
+})();
+
+</script>
+</body>
+</html>
