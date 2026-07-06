@@ -7,3 +7,6 @@ https://git-proxy.pavel-vlasov.workers.dev/
 
 Viewer URL:
 https://pavel-vlasov.github.io/Git-Html-Viewer/
+
+Artifacts Repository (owner/repo):
+pavel-vlasov/TestBulder_reports_repository
