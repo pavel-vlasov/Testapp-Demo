@@ -1297,6 +1297,7 @@ pre.blv-pre {
         <input type="checkbox" class="sync-artifact-check" id="sync-check-ds" aria-label="Include dataset file">
         <div class="sync-artifact-info">
           <div class="sync-artifact-label">Dataset</div>
+          <input class="git-commit-input" type="text" id="syncDatasetNameInput" placeholder="Dataset name…" aria-label="Dataset name" disabled oninput="onSyncDatasetNameInput()" style="margin:4px 0;">
           <div class="sync-artifact-path" id="sync-path-ds">—</div>
           <div class="sync-artifact-warn" id="sync-ds-warn" style="display:none"></div>
         </div>
@@ -3807,10 +3808,9 @@ function normalizeApiPath(apiPath, rules) {
 }
 
 function buildReportFilename() {
-  const app  = slugify(data[0]?.appName || 'unknown');
-  const ts   = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
   const name = slugify(getReportName());
-  return `${app}_${ts}${name ? '_' + name : ''}.html`;
+  const ts   = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+  return `${name ? name + '_' : ''}${ts}.html`;
 }
 
 function buildReportPath() {
@@ -3825,12 +3825,12 @@ function buildExecutionPath() {
   const root  = (localStorage.getItem('trb-git-exec-root') || 'executions/').replace(/\/$/, '');
   const app   = slugify(data[0]?.appName || 'unknown');
   const month = new Date().toISOString().slice(0, 7);
-  const ts    = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
   const name  = slugify(getReportName());
-  return `${root}/${app}/${month}/${app}_${ts}${name ? '_' + name : ''}.json`;
+  const ts    = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+  return `${root}/${app}/${month}/${name ? name + '_' : ''}${ts}.json`;
 }
 
-function buildDatasetPath() {
+function buildDatasetPath(dsName) {
   if (gitFilePath && gitFilePath.includes('/datasets/')) return gitFilePath;
   const rawApis = [...new Set(data.map(t => (t.api_path || '').split('?')[0]).filter(Boolean))];
   if (rawApis.length === 0) throw new Error('No api_path found in test cases');
@@ -3841,7 +3841,10 @@ function buildDatasetPath() {
   const app    = slugify(data[0]?.appName || 'unknown');
   const apiDir = normalizeApiPath(apis[0]);
   const sep    = apiDir.startsWith('/') ? '' : '/';
-  return `${root}/${app}${sep}${apiDir}/dataset.json`;
+  const name   = slugify(dsName || '');
+  const ts     = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+  const fileName = `${name ? name + '_' : ''}${ts}.json`;
+  return `${root}/${app}${sep}${apiDir}/${fileName}`;
 }
 
 async function syncToGit(items, commitMsg) {
@@ -3961,8 +3964,10 @@ function showGitSyncModal() {
   // Paths
   const rPath = noData ? '—' : buildReportPath();
   const ePath = noData ? '—' : buildExecutionPath();
+  const dsNameInput = document.getElementById('syncDatasetNameInput');
+  dsNameInput.value = '';
   let dPath = '—';
-  try { dPath = noData ? '—' : buildDatasetPath(); } catch {}
+  try { dPath = noData ? '—' : buildDatasetPath(dsNameInput.value); } catch {}
 
   document.getElementById('sync-path-report').textContent = rPath;
   document.getElementById('sync-path-exec').textContent   = ePath;
@@ -3984,10 +3989,17 @@ function showGitSyncModal() {
   cReport.checked = false; cReport.disabled = noData || noName;
   cExec.checked   = false; cExec.disabled   = noData || noName;
   cDs.checked     = false; cDs.disabled     = noData || noName || multiApi || apis.length === 0;
+  dsNameInput.disabled = true;
 
   // Auto-generate commit message on checkbox change (first toggle only)
   [cReport, cExec, cDs].forEach(cb => {
     cb.onchange = () => {
+      if (cb === cDs) {
+        dsNameInput.disabled = !cDs.checked;
+        if (cDs.checked) dsNameInput.focus();
+        else dsNameInput.value = '';
+        onSyncDatasetNameInput();
+      }
       if (!commitMsgTouched) generateCommitMsg();
       updateSyncBtn();
     };
@@ -4040,6 +4052,15 @@ function generateCommitMsg() {
   document.getElementById('syncCommitMsg').value = msg;
 }
 
+function onSyncDatasetNameInput() {
+  const cDs = document.getElementById('sync-check-ds').checked;
+  const dsNameInput = document.getElementById('syncDatasetNameInput');
+  let dPath = '—';
+  try { dPath = data.length === 0 ? '—' : buildDatasetPath(cDs ? dsNameInput.value : ''); } catch {}
+  document.getElementById('sync-path-ds').textContent = dPath;
+  updateSyncBtn();
+}
+
 function updateSyncBtn() {
   const cReport = document.getElementById('sync-check-report').checked;
   const cExec   = document.getElementById('sync-check-exec').checked;
@@ -4047,10 +4068,11 @@ function updateSyncBtn() {
   const msg     = document.getElementById('syncCommitMsg').value.trim();
   const dsWarnVisible = document.getElementById('sync-ds-warn').style.display !== 'none';
   const dsConflict = cDs && dsWarnVisible;
+  const noDsName = cDs && !document.getElementById('syncDatasetNameInput').value.trim();
   const anySelected = cReport || cExec || cDs;
   const noName = !getReportName().trim();
   const btn = document.getElementById('gitSyncDoBtn');
-  btn.disabled = !anySelected || !msg || dsConflict || noName;
+  btn.disabled = !anySelected || !msg || dsConflict || noDsName || noName;
 }
 
 function updateSyncProgress(step, label) {
@@ -4094,7 +4116,8 @@ async function doGitSync() {
     items.push({ path: document.getElementById('sync-path-exec').textContent, content: JSON.stringify(buildExecution(), null, 2) });
   }
   if (cDs) {
-    items.push({ path: document.getElementById('sync-path-ds').textContent, content: JSON.stringify(buildDataset(), null, 2) });
+    const dsPath = buildDatasetPath(document.getElementById('syncDatasetNameInput').value);
+    items.push({ path: dsPath, content: JSON.stringify(buildDataset(), null, 2) });
   }
   if (!items.length) return;
 
